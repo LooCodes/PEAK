@@ -4,9 +4,21 @@ A fitness web application built with **React + TypeScript + Vite (frontend)** an
 
 ---
 
-## ⚡ Frontend Setup
+## 🧩 Prerequisites
 
-### 1. Install Dependencies
+Install **pnpm** globally (one-time per machine):
+
+```bash
+npm install -g pnpm
+```
+
+## ⚡ Frontend Setup
+### 1. Go to the frontend app
+```bash
+cd frontend/peak-frontend
+```
+
+### 2. Install Dependencies
 Use **pnpm** (recommended for faster installs and smaller disk usage):
 ```bash
 pnpm install
