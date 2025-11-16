@@ -15,7 +15,7 @@ npm install -g pnpm
 ## ⚡ Frontend Setup
 ### 1. Go to the frontend app
 ```bash
-cd frontend/peak-frontend
+cd peak-frontend
 ```
 
 ### 2. Install Dependencies
