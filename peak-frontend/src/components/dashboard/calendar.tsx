@@ -46,7 +46,7 @@ function Calendar({ markedDates = [] }: CalendarProps) {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-md mx-auto bg-white p-6 border border-gray-300 rounded-xl shadow">
         <h2 className="text-xl font-bold mb-4">
         {monthName} {year}
         </h2>
