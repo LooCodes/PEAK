@@ -9,7 +9,7 @@ export default function ViewLeaderBoard () {
                     <h2>{leaderboard_pos}</h2>
                 </div>
                 <div className="inline-block">
-                    <h2 className="font-extrabold">View Leaderboard</h2>
+                    <a href="/leaderboard" className="font-extrabold hover:underline">View Leaderboard</a>
                     <h2>You're ranked #{leaderboard_pos}</h2>
                     <h2 className="font-light">You have earned {xp_earned} XP this week.</h2>
                 </div>
