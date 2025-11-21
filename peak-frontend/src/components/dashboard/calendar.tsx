@@ -1,24 +1,22 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 type CalendarProps = {
-  // e.g. ["2025-11-01", "2025-11-03"]
-  markedDates?: string[]; 
+  workoutDates?: string[];
+  mealDates?: string[];
 };
 
-function Calendar({ markedDates = [] }: CalendarProps) {
-  const today = new Date();
+function Calendar({ workoutDates = [], mealDates = [] }: CalendarProps) {
+  const [currentDate, setCurrentDate] = useState(() => new Date());
 
-  // Get year + month (0-based month!)
-  const year = today.getFullYear();
-  const month = today.getMonth(); // 0 = Jan, 10 = Nov, etc.
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
 
-  // Build calendar data
   const days = useMemo(() => {
     const firstDayOfMonth = new Date(year, month, 1);
-    const lastDayOfMonth = new Date(year, month + 1, 0); // day 0 of next month = last day of current
+    const lastDayOfMonth = new Date(year, month + 1, 0);
 
     const numDays = lastDayOfMonth.getDate();
-    const startWeekday = firstDayOfMonth.getDay(); // 0 = Sunday, 1 = Monday...
+    const startWeekday = firstDayOfMonth.getDay();
 
     const cells: (number | null)[] = [];
 
@@ -32,72 +30,121 @@ function Calendar({ markedDates = [] }: CalendarProps) {
       cells.push(day);
     }
 
+    // ✅ Always render 6 rows (6 * 7 = 42 cells) for fixed height
+    while (cells.length < 42) {
+      cells.push(null);
+    }
+
     return cells;
   }, [year, month]);
 
-  const monthName = today.toLocaleString("default", { month: "long" });
+  const monthName = currentDate.toLocaleString("default", { month: "long" });
 
-  // Helper to format YYYY-MM-DD
   const formatDate = (day: number) => {
-    const m = month + 1; // human month
+    const m = month + 1;
     const mm = m < 10 ? `0${m}` : `${m}`;
     const dd = day < 10 ? `0${day}` : `${day}`;
     return `${year}-${mm}-${dd}`;
   };
 
+  const goToPrevMonth = () => {
+    setCurrentDate(
+      (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
+    );
+  };
+
+  const goToNextMonth = () => {
+    setCurrentDate(
+      (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
+    );
+  };
+
+  // 🔹 Compute "today" in LOCAL time (not UTC)
+  const today = new Date();
+  const todayYear = today.getFullYear();
+  const todayMonth = today.getMonth() + 1; // 1–12
+  const todayDay = today.getDate();
+  const todayKey = `${todayYear}-${String(todayMonth).padStart(2, "0")}-${String(
+    todayDay
+  ).padStart(2, "0")}`;
+
   return (
-    <div className="w-full max-w-md mx-auto">
-        <h2 className="text-xl font-bold mb-4">
-        {monthName} {year}
+    <div className="w-full max-w-md bg-white p-6 border border-gray-300 rounded-xl shadow">
+      {/* Header with month + arrows */}
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={goToPrevMonth}
+          className="px-2 py-1 text-lg font-semibold hover:bg-gray-100 rounded"
+        >
+          ‹
+        </button>
+
+        <h2 className="text-xl font-bold">
+          {monthName} {year}
         </h2>
 
-        {/* Grid container */}
-        <div className="grid grid-cols-7 gap-1">
+        <button
+          onClick={goToNextMonth}
+          className="px-2 py-1 text-lg font-semibold hover:bg-gray-100 rounded"
+        >
+          ›
+        </button>
+      </div>
 
+      {/* Grid container */}
+      <div className="grid grid-cols-7 gap-1">
         {/* Weekday labels */}
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-            <div
-            key={day}
-            className="text-center font-semibold text-sm py-1"
-            >
+          <div key={day} className="text-center font-semibold text-sm py-1">
             {day}
-            </div>
+          </div>
         ))}
 
         {/* Day cells */}
         {days.map((day, index) => {
-            if (day === null) {
+          if (day === null) {
             return (
-                <div
+              <div
                 key={index}
-                className="h-12 bg-gray-100 border border-gray-200 rounded"
-                />
+                className="h-14 bg-gray-100 border border-gray-200 rounded"
+              />
             );
-            }
+          }
 
-            const dateKey = formatDate(day);
-            const isMarked = markedDates.includes(dateKey);
+          const dateKey = formatDate(day);
 
-            return (
+          const hasWorkout = workoutDates.includes(dateKey);
+          const hasMeal = mealDates.includes(dateKey);
+          const isToday = dateKey === todayKey;
+          const isInteractive = hasWorkout || hasMeal;
+
+          return (
             <div
-                key={index}
-                className={`
-                h-12 border border-gray-300 rounded flex flex-col items-center justify-center relative
-                ${isMarked ? "bg-green-100 border-green-400" : ""}
-                `}
+              key={index}
+              className={`
+                relative h-14 border rounded flex flex-col items-center justify-start pt-1
+                ${isToday ? "bg-green-100 border-green-500" : "border-gray-300"}
+                ${
+                  isInteractive
+                    ? "cursor-pointer hover:bg-blue-50 hover:border-blue-400 hover:shadow-md hover:scale-105 transition-transform transition-colors duration-150"
+                    : ""
+                }
+              `}
             >
-                <span className="text-sm font-medium">{day}</span>
+              {/* Day number */}
+              <span className="text-sm font-medium">{day}</span>
 
-                {isMarked && (
-                <span className="w-2 h-2 bg-green-500 rounded-full absolute bottom-1"></span>
-                )}
+              {/* Emoji row */}
+              <div className="flex gap-1 mt-1 text-lg leading-none">
+                {hasWorkout && <span>🏋️</span>}
+                {hasMeal && <span>🍎</span>}
+              </div>
             </div>
-            );
+          );
         })}
-        </div>
+      </div>
     </div>
-    );
-
+  );
 }
 
 export default Calendar;
