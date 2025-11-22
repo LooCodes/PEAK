@@ -1,18 +1,21 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useState } from "react";
+import Navbar from "./components/Navbar";
+import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 
-
-export default function App() {
+const App = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(true); // This is only used for testing purposes
+  
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-slate-100">
-  
-        <main className="max-w-6xl mx-auto">
-          <Routes>
-            <Route path="/dashboard" element={<Dashboard />} />
-          </Routes>
-        </main>
-      </div>
+      <Navbar isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn}/>
+      <Routes>
+          <Route path="/" element={<LandingPage/>} />
+          <Route path="/dashboard" element={<Dashboard/>} />
+      </Routes>
     </BrowserRouter>
   );
-}
+};
+
+export default App;
