@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import QuestionnairePage from "./pages/Questionnaire";
+import LeaderboardPage from "./pages/Leaderboard";
 
 
 export default function App() {
@@ -12,6 +13,7 @@ export default function App() {
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/questionnaire" element={<QuestionnairePage />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
 
           </Routes>
         </main>
