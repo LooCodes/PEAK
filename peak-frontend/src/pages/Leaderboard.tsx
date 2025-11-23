@@ -1,122 +1,164 @@
 // src/pages/Leaderboard.tsx
-import { useEffect, useState } from "react";
-import LeaderboardTable from "../components/dashboard/Leaderboard/LeaderboardTable";
-import type { LeaderboardEntry } from "../components/dashboard/Leaderboard/LeaderboardTable";
 
-type Period = "weekly" | "monthly" | "all-time";
-
-const MOCK_DATA: Record<Period, LeaderboardEntry[]> = {
-  weekly: [
-    { rank: 1, name: "You", points: 820, streakDays: 6, change: +1 },
-    { rank: 2, name: "sam", points: 790, streakDays: 7, change: 0 },
-    { rank: 3, name: "luis", points: 740, streakDays: 4, change: -1 },
-    { rank: 4, name: "arjun", points: 690, streakDays: 3, change: +2 },
-    { rank: 5, name: "fluff", points: 650, streakDays: 2, change: 0 },
-  ],
-  monthly: [
-    { rank: 1, name: "sam", points: 3100, streakDays: 18, change: 0 },
-    { rank: 2, name: "You", points: 2980, streakDays: 16, change: +2 },
-    { rank: 3, name: "luis", points: 2750, streakDays: 12, change: -1 },
-    { rank: 4, name: "arjun", points: 2600, streakDays: 10, change: 0 },
-    { rank: 5, name: "fluff", points: 2450, streakDays: 7, change: +1 },
-  ],
-  "all-time": [
-    { rank: 1, name: "sam", points: 10230, streakDays: 45, change: 0 },
-    { rank: 2, name: "You", points: 9875, streakDays: 39, change: 0 },
-    { rank: 3, name: "luis", points: 9540, streakDays: 34, change: 0 },
-    { rank: 4, name: "arjun", points: 9230, streakDays: 29, change: 0 },
-    { rank: 5, name: "fluff", points: 8870, streakDays: 21, change: 0 },
-  ],
+type LeaderboardEntry = {
+  rank: number;
+  name: string;
+  points: number;
 };
 
-export default function LeaderboardPage() {
-  const [period, setPeriod] = useState<Period>("weekly");
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+const ENTRIES: LeaderboardEntry[] = [
+  { rank: 1, name: "Sam", points: 3200 },
+  { rank: 2, name: "Arjun", points: 2950 },
+  { rank: 3, name: "Luis", points: 2810 },
+  { rank: 4, name: "bigjony24K", points: 2500 }, // 👈 uppercase K
+  { rank: 5, name: "2", points: 2300 },
+  { rank: 6, name: "3", points: 2200 },
+  { rank: 7, name: "4th guy", points: 2100 },
+];
 
-  // later: replace with real API call
-  useEffect(() => {
-    setEntries(MOCK_DATA[period]);
-  }, [period]);
+const CURRENT_USER_NAME = "bigjony24K";
+
+export default function LeaderboardPage() {
+  const sorted = [...ENTRIES].sort((a, b) => a.rank - b.rank);
+  const [first, second, third] = sorted;
+  const others = sorted.slice(3);
+
+  const yourEntry =
+    sorted.find((e) => e.name === CURRENT_USER_NAME) ?? sorted[0];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Leaderboard</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Track how you stack up against other PEAK users.
-          </p>
+    <div className="space-y-8">
+      {/* Top bar like your sketch */}
+      <header className="flex items-center justify-between">
+        {/* hamburger */}
+        <div className="w-9 h-9 rounded-full border border-slate-300 flex items-center justify-center">
+          <div className="space-y-1">
+            <span className="block h-0.5 w-4 bg-slate-600" />
+            <span className="block h-0.5 w-4 bg-slate-600" />
+          </div>
         </div>
 
-        {/* Period toggle */}
-        <div className="inline-flex rounded-full border border-slate-200 bg-white p-1">
-          {(["weekly", "monthly", "all-time"] as Period[]).map((p) => {
-            const label =
-              p === "weekly"
-                ? "Weekly"
-                : p === "monthly"
-                ? "Monthly"
-                : "All-time";
-            const isActive = p === period;
-            return (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 text-xs sm:text-sm rounded-full font-medium transition-colors ${
-                  isActive
-                    ? "bg-lime-400 text-black"
-                    : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
+        <h1 className="text-2xl font-bold text-slate-900">Leaderboard</h1>
+
+        <div className="text-sm font-semibold tracking-wide text-slate-600">
+          PEAK.
         </div>
       </header>
 
-      {/* Highlight card for "You" */}
-      {entries.length > 0 && (
-        <div className="rounded-2xl border border-lime-200 bg-lime-50 px-5 py-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-lime-900">
-              Your position this {period === "weekly" ? "week" : period === "monthly" ? "month" : "season"}
-            </p>
-            <p className="text-sm text-lime-800">
-              Keep hitting your workouts and logging food to climb higher!
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-xs uppercase tracking-wide text-lime-800">
-                Rank
-              </p>
-              <p className="text-2xl font-bold text-lime-900">
-                {
-                  entries.find((e) => e.name === "You")?.rank ??
-                  "–"
-                }
-              </p>
-            </div>
-            <div className="w-px h-10 bg-lime-200" />
-            <div className="text-right">
-              <p className="text-xs uppercase tracking-wide text-lime-800">
-                Points
-              </p>
-              <p className="text-2xl font-bold text-lime-900">
-                {entries
-                  .find((e) => e.name === "You")
-                  ?.points.toLocaleString() ?? "–"}
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* Subtitle: date range */}
+      <p className="text-center text-sm text-slate-600">
+        PEAK Ranking for 11/09/2025 – 11/16/2025
+        {/* later you can compute this week’s range */}
+      </p>
+
+      {/* Podium for top 3 */}
+      {first && second && third && (
+        <section className="mt-4 flex justify-center items-end gap-6">
+          {/* 2nd place (left) */}
+          <PodiumBlock
+            position="2nd"
+            entry={second}
+            heightClass="h-28"
+          />
+
+          {/* 1st place (center, tallest) */}
+          <PodiumBlock
+            position="1st"
+            entry={first}
+            heightClass="h-36"
+            highlight
+          />
+
+          {/* 3rd place (right) */}
+          <PodiumBlock
+            position="3rd"
+            entry={third}
+            heightClass="h-24"
+          />
+        </section>
       )}
 
-      {/* Table */}
-      <LeaderboardTable entries={entries} />
+      {/* Ranks 4+ */}
+      <section className="space-y-3 mt-6">
+        {others.map((entry) => (
+          <div
+            key={entry.rank}
+            className="rounded-2xl border border-slate-200 bg-white px-5 py-3 flex items-center justify-between shadow-sm"
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-semibold text-slate-500">
+                {entry.rank}.
+              </span>
+              <span className="font-medium text-slate-900">
+                {entry.name}
+              </span>
+            </div>
+            <span className="text-sm font-semibold text-slate-700">
+              {entry.points.toLocaleString()} pts
+            </span>
+          </div>
+        ))}
+      </section>
+
+      {/* Your rank at the bottom */}
+      <section className="mt-6">
+        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-4 flex items-center justify-between shadow-sm">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Your ranking
+            </p>
+            <p className="text-2xl font-bold text-slate-900">
+              #{yourEntry.rank}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-semibold text-slate-900">
+              {CURRENT_USER_NAME}
+            </p>
+            <p className="text-xs text-slate-500">
+              {yourEntry.points.toLocaleString()} total points
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────── */
+/* Small helper component for the podium blocks    */
+/* ──────────────────────────────────────────────── */
+
+type PodiumBlockProps = {
+  position: "1st" | "2nd" | "3rd";
+  entry: LeaderboardEntry;
+  heightClass: string; // e.g. "h-36"
+  highlight?: boolean;
+};
+
+function PodiumBlock({
+  position,
+  entry,
+  heightClass,
+  highlight,
+}: PodiumBlockProps) {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <span className="text-sm font-medium text-slate-800">
+        {entry.name}
+      </span>
+      <div
+        className={`w-24 ${heightClass} rounded-t-2xl border border-slate-300 bg-white flex flex-col items-center justify-center shadow-sm ${
+          highlight ? "bg-lime-100 border-lime-300" : ""
+        }`}
+      >
+        <span className="text-lg font-bold text-slate-900">
+          {position}
+        </span>
+        <span className="text-[11px] text-slate-500 mt-1">
+          {entry.points.toLocaleString()} pts
+        </span>
+      </div>
     </div>
   );
 }

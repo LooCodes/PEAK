@@ -13,72 +13,83 @@ type LeaderboardTableProps = {
 };
 
 export default function LeaderboardTable({ entries }: LeaderboardTableProps) {
+  if (entries.length === 0) return null;
+
+  const maxPoints =
+    entries.reduce((max, e) => (e.points > max ? e.points : max), 0) || 1;
+
   return (
-    <div className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      <table className="min-w-full text-left text-sm">
-        <thead className="bg-slate-50 border-b border-slate-200">
-          <tr className="text-slate-600">
-            <th className="px-4 py-3 font-semibold">Rank</th>
-            <th className="px-4 py-3 font-semibold">User</th>
-            <th className="px-4 py-3 font-semibold text-right">Points</th>
-            <th className="px-4 py-3 font-semibold text-right">Streak (days)</th>
-            <th className="px-4 py-3 font-semibold text-right">Change</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => {
-            const isTop3 = entry.rank <= 3;
-            const changeColor =
-              entry.change > 0
-                ? "text-emerald-600"
-                : entry.change < 0
-                ? "text-rose-600"
-                : "text-slate-500";
+    <div className="mt-6 space-y-3">
+      {entries.map((entry) => {
+        const isTop3 = entry.rank <= 3;
+        const changeColor =
+          entry.change > 0
+            ? "text-emerald-600"
+            : entry.change < 0
+            ? "text-rose-600"
+            : "text-slate-500";
 
-            const changeLabel =
-              entry.change > 0
-                ? `+${entry.change}`
-                : entry.change < 0
-                ? `${entry.change}`
-                : "—";
+        const changeLabel =
+          entry.change > 0
+            ? `+${entry.change}`
+            : entry.change < 0
+            ? `${entry.change}`
+            : "—";
 
-            return (
-              <tr
-                key={entry.rank}
-                className="border-b last:border-b-0 border-slate-100 hover:bg-slate-50/80 transition-colors"
-              >
-                <td className="px-4 py-3 align-middle">
-                  <span
-                    className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-                      isTop3
-                        ? "bg-lime-100 text-lime-800"
-                        : "bg-slate-100 text-slate-700"
-                    }`}
-                  >
-                    {entry.rank}
-                  </span>
-                </td>
-                <td className="px-4 py-3 align-middle">
-                  <span className="font-medium text-slate-800">{entry.name}</span>
-                </td>
-                <td className="px-4 py-3 text-right align-middle">
-                  <span className="font-semibold text-slate-800">
-                    {entry.points.toLocaleString()}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right align-middle">
-                  <span className="text-slate-700">{entry.streakDays}</span>
-                </td>
-                <td className="px-4 py-3 text-right align-middle">
-                  <span className={`text-sm font-medium ${changeColor}`}>
-                    {changeLabel}
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+        const barPercent = (entry.points / maxPoints) * 100;
+
+        return (
+          <div
+            key={entry.rank}
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+          >
+            {/* top row: rank + name + change */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <span
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
+                    isTop3
+                      ? "bg-lime-100 text-lime-800"
+                      : "bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  {entry.rank}
+                </span>
+                <div>
+                  <p className="font-semibold text-slate-900">{entry.name}</p>
+                  <p className="text-xs text-slate-500">
+                    Streak: {entry.streakDays} day
+                    {entry.streakDays === 1 ? "" : "s"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <p className="text-xs text-slate-500">Change</p>
+                <p className={`text-sm font-medium ${changeColor}`}>
+                  {changeLabel}
+                </p>
+              </div>
+            </div>
+
+            {/* bar row */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-3 rounded-full bg-slate-200 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-lime-400 transition-[width] duration-300"
+                  style={{ width: `${barPercent}%` }}
+                />
+              </div>
+              <div className="w-20 text-right">
+                <p className="text-xs text-slate-500">Points</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {entry.points.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
