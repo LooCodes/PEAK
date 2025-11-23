@@ -10,7 +10,7 @@ const ENTRIES: LeaderboardEntry[] = [
   { rank: 1, name: "Sam", points: 3200 },
   { rank: 2, name: "Arjun", points: 2950 },
   { rank: 3, name: "Luis", points: 2810 },
-  { rank: 4, name: "bigjony24K", points: 2500 }, // 👈 uppercase K
+  { rank: 4, name: "bigjony24K", points: 2500 }, 
   { rank: 5, name: "2", points: 2300 },
   { rank: 6, name: "3", points: 2200 },
   { rank: 7, name: "4th guy", points: 2100 },
@@ -125,9 +125,7 @@ export default function LeaderboardPage() {
   );
 }
 
-/* ──────────────────────────────────────────────── */
-/* Small helper component for the podium blocks    */
-/* ──────────────────────────────────────────────── */
+
 
 type PodiumBlockProps = {
   position: "1st" | "2nd" | "3rd";
