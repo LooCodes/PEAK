@@ -1,7 +1,7 @@
 import { useState } from "react";
-import ProgressBar from "../components/questionnaire/progressBar";
-import QuestionnaireSection from "../components/questionnaire/questionnaireSection";
-import NextButton from "../components/questionnaire/nextButton";
+import ProgressBar from "../components/questionnaire/ProgressBar";
+import QuestionnaireSection from "../components/questionnaire/QuestionnaireSection";
+import NextButton from "../components/questionnaire/NextButton";
 
 type Question = {
   id: number;
