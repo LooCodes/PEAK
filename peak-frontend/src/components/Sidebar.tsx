@@ -1,4 +1,10 @@
-const Sidebar = ({isLoggedIn, isOpen, onClose, setIsLoggedIn}: {isLoggedIn: boolean, isOpen: boolean, onClose: () => void, setIsLoggedIn: () => void}) => {
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+
+const Sidebar = ({isLoggedIn, isOpen, onClose, setIsLoggedIn}: {isLoggedIn: boolean, isOpen: boolean, onClose: () => void, setIsLoggedIn: (value: boolean) => void}) => {
+    const { isAuthenticated, logout } = useAuth();
+    const navigate = useNavigate();
+
     const baseLinks = [
         {label: 'Home', href:'/'},
         {label: 'Exercise', href:'/exercise'},
@@ -11,7 +17,14 @@ const Sidebar = ({isLoggedIn, isOpen, onClose, setIsLoggedIn}: {isLoggedIn: bool
         {label: 'Profile', href:'/profile'}
     ];
 
-    const links = isLoggedIn ? [...baseLinks, ...authLinks] : baseLinks;
+    const links = isAuthenticated ? [...baseLinks, ...authLinks] : baseLinks;
+
+    const handleLogout = () => {
+        logout();
+        setIsLoggedIn(false);
+        onClose();
+        navigate('/');
+    };
 
     return (
         <>
@@ -32,15 +45,15 @@ const Sidebar = ({isLoggedIn, isOpen, onClose, setIsLoggedIn}: {isLoggedIn: bool
 
                 <nav className="flex flex-col gap-2 px-4 py-4">
                     {links.map((link) => (
-                    <a key={link.label} href={link.href} onClick={onClose} className="px-2 py-2 rounded-lg hover:bg-[#2a2a2a] transition-colors">
+                    <Link key={link.label} to={link.href} onClick={onClose} className="px-2 py-2 rounded-lg hover:bg-[#2a2a2a] transition-colors">
                         {link.label}
-                    </a>
+                    </Link>
                     ))}
 
-                {isLoggedIn && (
-                    <a className="px-2 py-2 rounded-lg hover:bg-[#2a2a2a] text-red-400 hover:text-red-300" onClick={() => {setIsLoggedIn(false)}}>
+                {isAuthenticated && (
+                    <button className="px-2 py-2 rounded-lg hover:bg-[#2a2a2a] text-red-400 hover:text-red-300 text-left" onClick={handleLogout}>
                         Log out
-                    </a>
+                    </button>
                 )}
                 </nav>
             </aside>

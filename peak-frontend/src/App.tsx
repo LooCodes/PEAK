@@ -1,23 +1,52 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useState } from "react";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import Questionnaire from "./pages/Questionnaire";
 import Leaderboard from "./pages/Leaderboard";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(true); // This is only used for testing purposes
-  
+
   return (
     <BrowserRouter>
-      <Navbar isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn}/>
-      <Routes>
+      <AuthProvider>
+        <Navbar isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn}/>
+        <Routes>
           <Route path="/" element={<LandingPage/>} />
-          <Route path="/dashboard" element={<Dashboard/>} />
-          <Route path="/questionnaire" element={<Questionnaire/>} />
-          <Route path="/leaderboard" element={<Leaderboard/>} />
-      </Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard/>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/questionnaire"
+            element={
+              <ProtectedRoute>
+                <Questionnaire/>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leaderboard"
+            element={
+              <ProtectedRoute>
+                <Leaderboard/>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 };
