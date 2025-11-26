@@ -69,12 +69,12 @@ function Calendar({ workoutDates = [], mealDates = [] }: CalendarProps) {
   ).padStart(2, "0")}`;
 
   return (
-    <div className="w-full max-w-md bg-white p-6 border border-gray-300 rounded-xl shadow">
+    <div className="w-full max-w-md bg-[#1a1a1a] p-6 border border-gray-300 rounded-xl shadow">
       {/* Header with month + arrows */}
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={goToPrevMonth}
-          className="px-2 py-1 text-lg font-semibold hover:bg-gray-100 rounded"
+          className="px-2 py-1 text-lg font-semibold hover:bg-[#101010] rounded"
         >
           ‹
         </button>
@@ -85,7 +85,7 @@ function Calendar({ workoutDates = [], mealDates = [] }: CalendarProps) {
 
         <button
           onClick={goToNextMonth}
-          className="px-2 py-1 text-lg font-semibold hover:bg-gray-100 rounded"
+          className="px-2 py-1 text-lg font-semibold hover:bg-[#101010] rounded"
         >
           ›
         </button>
@@ -106,7 +106,7 @@ function Calendar({ workoutDates = [], mealDates = [] }: CalendarProps) {
             return (
               <div
                 key={index}
-                className="h-14 bg-gray-100 border border-gray-200 rounded"
+                className="h-14 bg-[#212121] border border-gray-200 rounded"
               />
             );
           }
@@ -123,10 +123,10 @@ function Calendar({ workoutDates = [], mealDates = [] }: CalendarProps) {
               key={index}
               className={`
                 relative h-14 border rounded flex flex-col items-center justify-start pt-1
-                ${isToday ? "bg-green-100 border-green-500" : "border-gray-300"}
+                ${isToday ? "bg-[#062e03] border-green-500" : "border-gray-300"}
                 ${
                   isInteractive
-                    ? "cursor-pointer hover:bg-blue-50 hover:border-blue-400 hover:shadow-md hover:scale-105 transition-transform transition-colors duration-150"
+                    ? "cursor-pointer hover:bg-[#101010] hover:border-blue-400 hover:shadow-md hover:scale-105 transition-transform transition-colors duration-150"
                     : ""
                 }
               `}

@@ -17,7 +17,7 @@ export default function ViewChallenges() {
   ];
 
   return (
-    <div className="bg-white p-6 border border-gray-300 rounded-xl shadow w-[500px]">
+    <div className="bg-[#1a1a1a] p-6 border border-gray-300 rounded-xl shadow w-[500px]">
       <h2 className="text-2xl font-bold mb-1">Your Challenges</h2>
 
       <div className="flex gap-8 px-2">

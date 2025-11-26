@@ -47,7 +47,7 @@ const Register = () => {
         height: heightInInches || undefined,
         weight: formData.weight ? parseFloat(formData.weight) : undefined,
       });
-
+      console.log("registered:", register)
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Registration failed. Please try again.');
@@ -57,55 +57,52 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen from-blue-50 to-purple-50 flex items-center justify-center p-4 pt-24">
       <div className="w-full max-w-2xl">
-        <h1 className="text-4xl font-bold text-center mb-8 text-gray-800" style={{ fontFamily: 'cursive' }}>
-          Register
-        </h1>
 
-        <div className="bg-white rounded-3xl p-8 shadow-lg border-4 border-gray-800" style={{ borderStyle: 'solid', transform: 'rotate(-0.5deg)' }}>
+        <div className="bg-[#1a1a1a] rounded-3xl p-8 shadow-lg border-4 border-[#1a1a1a]" style={{ borderStyle: 'solid', transform: 'rotate(-0.5deg)' }}>
           <div style={{ transform: 'rotate(0.5deg)' }}>
             <div className="text-center mb-6">
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">Register</h2>
-              <p className="text-gray-500 text-sm">Create an account to get started</p>
+              <h2 className="text-3xl font-bold mb-2">Register</h2>
+              <p className="text-sm">Create an account to get started</p>
             </div>
 
             {error && (
               <div className="mb-4 p-3 bg-red-100 border-2 border-red-400 rounded-lg text-red-700 text-sm">
-                {error}
+                {JSON.stringify(error, null, 2)}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                  <label className="block text-sm font-medium mb-2">First Name</label>
                   <input
                     type="text"
                     name="firstName"
                     placeholder="First Name"
                     value={formData.firstName}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-white text-gray-900"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-[#212121]"
                     style={{ transform: 'rotate(-0.3deg)' }}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                  <label className="block text-sm font-medium mb-2">Last Name</label>
                   <input
                     type="text"
                     name="lastName"
                     placeholder="Last Name"
                     value={formData.lastName}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-white text-gray-900"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-[#212121]"
                     style={{ transform: 'rotate(0.3deg)' }}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                <label className="block text-sm font-medium mb-2">Username</label>
                 <input
                   type="text"
                   name="username"
@@ -113,13 +110,13 @@ const Register = () => {
                   value={formData.username}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-white text-gray-900"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-[#212121]"
                   style={{ transform: 'rotate(0.2deg)' }}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <label className="block text-sm font-medium mb-2">Email</label>
                 <input
                   type="email"
                   name="email"
@@ -127,13 +124,13 @@ const Register = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-white text-gray-900"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-[#212121]"
                   style={{ transform: 'rotate(-0.2deg)' }}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <label className="block text-sm font-medium mb-2">Password</label>
                 <input
                   type="password"
                   name="password"
@@ -141,13 +138,13 @@ const Register = () => {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-white text-gray-900"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-[#212121]"
                   style={{ transform: 'rotate(0.1deg)' }}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                <label className="block text-sm font-medium mb-2">Age</label>
                 <input
                   type="number"
                   name="age"
@@ -156,20 +153,20 @@ const Register = () => {
                   onChange={handleChange}
                   min="13"
                   max="120"
-                  className="w-32 px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-white text-gray-900"
+                  className="w-32 px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-[#212121]"
                   style={{ transform: 'rotate(-0.1deg)' }}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Height</label>
+                <label className="block text-sm font-medium mb-2">Height</label>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="relative">
                     <select
                       name="heightFeet"
                       value={formData.heightFeet}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-white text-gray-900 appearance-none"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-[#212121] appearance-none"
                       style={{ transform: 'rotate(-0.2deg)' }}
                     >
                       <option value="">Ft</option>
@@ -188,7 +185,7 @@ const Register = () => {
                       name="heightInches"
                       value={formData.heightInches}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-white text-gray-900 appearance-none"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-[#212121] appearance-none"
                       style={{ transform: 'rotate(0.2deg)' }}
                     >
                       <option value="">In</option>
@@ -196,7 +193,7 @@ const Register = () => {
                         <option key={inch} value={inch}>{inch} in</option>
                       ))}
                     </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                       </svg>
@@ -206,7 +203,7 @@ const Register = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Weight (lbs)</label>
+                <label className="block text-sm font-medium mb-2">Weight (lbs)</label>
                 <input
                   type="number"
                   name="weight"
@@ -215,7 +212,7 @@ const Register = () => {
                   onChange={handleChange}
                   min="0"
                   step="0.1"
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-white text-gray-900"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-[#212121]"
                   style={{ transform: 'rotate(-0.1deg)' }}
                 />
               </div>
@@ -224,19 +221,19 @@ const Register = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-4 rounded-2xl border-3 border-gray-800 bg-blue-500 hover:bg-blue-600 text-white font-bold text-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="w-full py-4 rounded-2xl border-3 border-gray-800 bg-blue-500 hover:bg-blue-600 font-bold text-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                   style={{ transform: 'rotate(0.2deg)' }}
                 >
                   {loading ? 'Signing Up...' : 'Sign Up'}
                 </button>
               </div>
 
-              <p className="text-center text-sm text-gray-600 mt-4">
+              <p className="text-center text-sm mt-4">
                 You'll be asked to complete a questionnaire next.
               </p>
             </form>
 
-            <div className="text-center mt-6 text-sm text-gray-600">
+            <div className="text-center mt-6 text-sm">
               Already have an account?{' '}
               <Link to="/login" className="text-blue-600 hover:text-blue-800 font-semibold underline">
                 Log in
