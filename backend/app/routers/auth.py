@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from db.session import SessionLocal
 from models.user import User
+from models.leaderboard import LeaderboardEntry
 from schemas.auth import UserRegister, UserLogin, Token, UserResponse
 from auth import hash_password, verify_password, create_access_token, get_current_user
 
@@ -47,6 +48,13 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
     )
 
     db.add(new_user)
+    db.flush()  # gets new_user.id without committing yet
+
+    leaderboard_entry = LeaderboardEntry(
+        user_id=new_user.id,
+        weekly_points=0
+    )
+    db.add(leaderboard_entry)
     db.commit()
     db.refresh(new_user)
 
