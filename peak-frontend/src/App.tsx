@@ -9,6 +9,7 @@ import Questionnaire from "./pages/Questionnaire";
 import Leaderboard from "./pages/Leaderboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Nutrition from "./pages/Nutrition";
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(true); // This is only used for testing purposes
@@ -45,6 +46,9 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+          <Route path="/nutrition" element={<Nutrition />} />
+          <Route path="/nutrition/search" element={<Nutrition />} />
+          <Route path="/nutrition/search/:code" element={<Nutrition />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
