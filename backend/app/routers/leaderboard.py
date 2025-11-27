@@ -1,46 +1,82 @@
 # backend/app/routers/leaderboard.py
-from datetime import date
-from typing import List, Optional
-
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
 
-from models.leaderboard import LeaderboardEntry      # ✅ correct
-from models.user import User                         # ✅ correct
-from schemas.leaderboard import LeaderboardEntryRead # ✅ correct
-from db.database import get_db
+from db.session import SessionLocal
+from models.user import User
+from models.leaderboard import LeaderboardEntry
+from auth import get_current_user
+from pydantic import BaseModel
 
-router = APIRouter(prefix="/leaderboard", tags=["leaderboard"])
+router = APIRouter(prefix="/api/leaderboard", tags=["leaderboard"])
 
 
-@router.get("/", response_model=List[LeaderboardEntryRead])
-def get_leaderboard(
-    period_start: Optional[date] = Query(None),
-    period_end: Optional[date] = Query(None),
-    db: Session = Depends(get_db),
-):
-    # if dates not provided, you could compute current week here
-    query = (
-        db.query(LeaderboardEntry, User.username)
-        .join(User, LeaderboardEntry.user_id == User.id)
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+# ---------- Pydantic response models ----------
+
+class LeaderboardItem(BaseModel):
+    username: str
+    weekly_points: int
+    rank: int
+
+
+# ---------- Helper to build the weekly leaderboard ----------
+
+def _build_weekly_leaderboard(db: Session) -> List[LeaderboardItem]:
+    # Join users with leaderboard entries and sort by points desc
+    rows = (
+        db.query(User.username, LeaderboardEntry.weekly_points)
+        .join(LeaderboardEntry, LeaderboardEntry.user_id == User.id)
+        .order_by(LeaderboardEntry.weekly_points.desc(), User.id.asc())
+        .all()
     )
 
-    if period_start is not None:
-        query = query.filter(LeaderboardEntry.period_start == period_start)
-    if period_end is not None:
-        query = query.filter(LeaderboardEntry.period_end == period_end)
-
-    entries = query.order_by(LeaderboardEntry.points.desc()).all()
-
-    # Build ranking + shape into schema
-    result: List[LeaderboardEntryRead] = []
-    for idx, (entry, username) in enumerate(entries, start=1):
-        result.append(
-            LeaderboardEntryRead(
-                id=entry.id,
-                username=username,
-                points=entry.points,
+    leaderboard: List[LeaderboardItem] = []
+    for idx, row in enumerate(rows, start=1):
+        leaderboard.append(
+            LeaderboardItem(
+                username=row.username,
+                weekly_points=row.weekly_points,
                 rank=idx,
             )
         )
-    return result
+    return leaderboard
+
+
+# ---------- Endpoints ----------
+
+@router.get("/weekly", response_model=List[LeaderboardItem])
+def get_weekly_leaderboard(db: Session = Depends(get_db)):
+    """
+    Full weekly leaderboard (sorted by weekly_points desc).
+    """
+    return _build_weekly_leaderboard(db)
+
+
+@router.get("/me", response_model=LeaderboardItem)
+def get_my_weekly_rank(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Current user's weekly points + rank.
+    """
+    leaderboard = _build_weekly_leaderboard(db)
+
+    for item in leaderboard:
+        if item.username == current_user.username:
+            return item
+
+    # Fallback: user has no leaderboard entry (shouldn't happen now)
+    raise HTTPException(
+        status_code=404,
+        detail="Leaderboard entry not found for current user",
+    )
