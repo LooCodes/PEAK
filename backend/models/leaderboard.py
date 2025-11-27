@@ -7,19 +7,13 @@ from db.base import Base
 
 
 class LeaderboardEntry(Base):
-    __tablename__ = "leaderboard"
+    __tablename__ = "leaderboard_entries"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    weekly_points = Column(Integer, nullable=False, default=0)
+    updated_at = Column(DateTime(timezone=True),
+                        server_default=func.now(),
+                        onupdate=func.now())
 
-    period_start = Column(Date, nullable=False)
-    period_end = Column(Date, nullable=False)
-
-    points = Column(Integer, nullable=False, default=0)
-    created_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False,
-    )
-
-    user = relationship("User", back_populates="leaderboard_entries")
+    user = relationship("User")
