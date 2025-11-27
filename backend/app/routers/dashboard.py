@@ -1,32 +1,10 @@
 # backend/app/routers/dashboard.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import List
-
 from db import get_db
-from models import Meal, Workout, Challenge  # ⬅️ add Challenge here
-from pydantic import BaseModel
-
-router = APIRouter()
-
-
-# ---------- Pydantic schemas for the frontend ----------
-
-class ChallengeOut(BaseModel):
-    id: int
-    label: str       # what you display in the UI
-    progress: int    # 0–100 for now (we'll keep 0 until we wire real progress)
-
-    class Config:
-        orm_mode = True
-
-
-class ChallengesResponse(BaseModel):
-    daily: List[ChallengeOut]
-    weekly: List[ChallengeOut]
-
-
-# ---------- Existing calendar endpoint ----------
+from models import Meal, Workout, Challenge
+from schemas.challenges import ChallengeOut, ChallengesResponse
+router = APIRouter() 
 
 @router.get("/calendar")
 def get_calendar_data(db: Session = Depends(get_db)):

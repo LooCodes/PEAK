@@ -5,7 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-type LeaderboardMe = {
+type LeaderboardMe = { //fix
   username: string;
   weekly_points: number;
   rank: number;
