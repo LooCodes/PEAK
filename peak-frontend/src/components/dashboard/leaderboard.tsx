@@ -3,7 +3,7 @@ export default function ViewLeaderBoard () {
     const leaderboard_pos = 67
     const xp_earned = 41
     return (
-        <div className="bg-white p-6 border border-gray-300 rounded-xl shadow w-[500px]">
+        <div className="bg-[#1a1a1a] p-6 border border-gray-300 rounded-xl shadow w-[500px]">
             <div className="flex gap-30">
                 <div className="flex items-center text-4xl font-bold">
                     <h2>{leaderboard_pos}</h2>

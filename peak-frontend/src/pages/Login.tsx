@@ -38,17 +38,14 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen from-blue-50 to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <h1 className="text-4xl font-bold text-center mb-8 text-blue-600" style={{ fontFamily: 'cursive' }}>
-          Log In
-        </h1>
 
-        <div className="bg-white rounded-3xl p-8 shadow-lg border-4 border-gray-800" style={{ borderStyle: 'solid', transform: 'rotate(-0.5deg)' }}>
+        <div className="bg-[#1a1a1a] rounded-3xl p-8 shadow-lg border-4 border-[#1a1a1a]" style={{ borderStyle: 'solid', transform: 'rotate(-0.5deg)' }}>
           <div style={{ transform: 'rotate(0.5deg)' }}>
             <div className="text-center mb-6">
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">Log in</h2>
-              <p className="text-gray-500 text-sm">Welcome back!</p>
+              <h2 className="text-3xl font-bold mb-2">Log in</h2>
+              <p className="text-sm">Welcome back!</p>
             </div>
 
             {error && (
@@ -66,7 +63,7 @@ const Login = () => {
                   value={formData.username}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-white text-gray-900"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-[#212121]"
                   style={{ transform: 'rotate(0.2deg)' }}
                 />
               </div>
@@ -79,7 +76,7 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-white pr-12"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 focus:outline-none focus:border-blue-500 bg-[#212121] pr-12"
                   style={{ transform: 'rotate(-0.2deg)' }}
                 />
                 <button
@@ -114,7 +111,7 @@ const Login = () => {
               </div>
             </form>
 
-            <div className="text-center mt-6 text-sm text-gray-600">
+            <div className="text-center mt-6 text-sm">
               Don't have an account?{' '}
               <Link to="/register" className="text-blue-600 hover:text-blue-800 font-semibold underline">
                 Register

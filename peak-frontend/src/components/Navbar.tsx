@@ -18,7 +18,7 @@ const Navbar = ({isLoggedIn, setIsLoggedIn}: {isLoggedIn: boolean, setIsLoggedIn
                             <Link to="/login">Log In!</Link>
                         </div>
                     )}
-                    <span className="text-xl font-semibold">PEAK.</span>
+                    <Link to={isAuthenticated ? "/dashboard" : "/"} className="text-xl font-semibold">PEAK.</Link>
                 </div>
             </nav>
 

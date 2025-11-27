@@ -1,4 +1,3 @@
-# backend/app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -6,7 +5,7 @@ from dotenv import load_dotenv
 
 from db import Base, engine
 from models import *   # noqa: F401,F403 (loads User, Meal, Workout, etc.)
-from .routers import dashboard, auth
+from .routers import dashboard, auth, nutrition
 
 load_dotenv()
 
@@ -37,3 +36,6 @@ app.include_router(auth.router)
 
 # Dashboard router
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+
+# Nutrition router
+app.include_router(nutrition.router)
