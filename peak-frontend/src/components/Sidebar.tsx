@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const Sidebar = ({isLoggedIn, isOpen, onClose, setIsLoggedIn}: {isLoggedIn: boolean, isOpen: boolean, onClose: () => void, setIsLoggedIn: (value: boolean) => void}) => {
+const Sidebar = ({isOpen, onClose, setIsLoggedIn}: {isOpen: boolean, onClose: () => void, setIsLoggedIn: (value: boolean) => void}) => {
     const { isAuthenticated, logout } = useAuth();
     const navigate = useNavigate();
 

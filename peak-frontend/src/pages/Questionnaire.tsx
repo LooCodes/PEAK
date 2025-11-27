@@ -34,16 +34,8 @@ export default function Questionnaire() {
   ).length;
 
   return (
-    <div className="space-y-8">
-      <header className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Questionnaire</h1>
-        <div className="w-9 h-9 rounded-full border border-slate-300 flex items-center justify-center">
-          <div className="space-y-1">
-            <span className="block h-0.5 w-4 bg-slate-500" />
-            <span className="block h-0.5 w-4 bg-slate-500" />
-          </div>
-        </div>
-      </header>
+    <div className="space-y-8 pt-24">
+      <h1 className="text-3xl font-bold text-center">Questionnaire</h1>
       
       <ProgressBar
         currentStep={answeredCount}

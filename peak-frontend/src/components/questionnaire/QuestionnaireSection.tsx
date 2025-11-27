@@ -25,21 +25,21 @@ type Question = {
     onAnswerChange,
   }: QuestionnaireSectionProps) {
     return (
-      <section className="space-y-6">
+      <section className="space-y-6 px-16">
         <h2 className="text-2xl font-semibold text-center">{topic}</h2>
   
         <div className="space-y-5">
           {questions.map((q, idx) => (
             <div
               key={q.id}
-              className="rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm"
+              className="rounded-2xl border border-slate-200 bg-[#1a1a1a] px-6 py-5 shadow-sm"
             >
               <p className="font-medium text-lg mb-4">
                 {idx + 1}. {q.text}
               </p>
-  
+
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <span className="text-sm text-slate-500 mb-1 md:mb-0">
+                <span className="text-sm mb-1 md:mb-0">
                   Select one:
                 </span>
   
@@ -54,8 +54,8 @@ type Question = {
                         className={[
                           "px-3 py-1 rounded-full border text-xs md:text-sm transition-colors",
                           selected
-                            ? "bg-lime-400 border-lime-400 text-black"
-                            : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50",
+                            ? "bg-blue-500 hover:bg-blue-600"
+                            : "bg-[#212121] hover:bg-[#101010]",
                         ].join(" ")}
                       >
                         {option}

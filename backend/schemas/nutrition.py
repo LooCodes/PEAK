@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class FoodSearchItem(BaseModel):
     code: Optional[str] 
     name: str
+    calories_per_100g: Optional[float]
 
 class FoodSearchResponse(BaseModel):
     results: List[FoodSearchItem]
