@@ -1,20 +1,75 @@
+import { useEffect, useState } from "react";
+import { useAuth } from "../../context/AuthContext"; // adjust path if needed
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
 type Challenge = {
+  id: number;
   label: string;
   progress: number; // 0–100
 };
 
-export default function ViewChallenges() {
-  const daily_challenges: Challenge[] = [
-    { label: "Do 5 push-ups", progress: 60 },
-    { label: "Drink 2L of water", progress: 40 },
-    { label: "Walk 5,000 steps", progress: 80 },
-  ];
+type ChallengesResponse = {
+  daily: Challenge[];
+  weekly: Challenge[];
+};
 
-  const weekly_challenges: Challenge[] = [
-    { label: "Do 100 push-ups", progress: 25 },
-    { label: "Run 10 miles total", progress: 50 },
-    { label: "Hit the gym 3 times", progress: 10 },
-  ];
+export default function ViewChallenges() {
+  const [dailyChallenges, setDailyChallenges] = useState<Challenge[]>([]);
+  const [weeklyChallenges, setWeeklyChallenges] = useState<Challenge[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // if your app doesn’t use a token, you can delete useAuth + Authorization header
+  const { token } = useAuth();
+
+  useEffect(() => {
+    const fetchChallenges = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/dashboard/challenges`, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          credentials: "include", // keep if you use cookies for auth
+        });
+
+        if (!res.ok) {
+          throw new Error(`Request failed with status ${res.status}`);
+        }
+
+        const data: ChallengesResponse = await res.json();
+        setDailyChallenges(data.daily || []);
+        setWeeklyChallenges(data.weekly || []);
+      } catch (err) {
+        console.error(err);
+        setError("Could not load challenges.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchChallenges();
+  }, [token]);
+
+  if (loading) {
+    return (
+      <div className="bg-white p-6 border border-gray-300 rounded-xl shadow w-[500px]">
+        <h2 className="text-2xl font-bold mb-1">Your Challenges</h2>
+        <p className="text-sm text-gray-500">Loading challenges...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white p-6 border border-gray-300 rounded-xl shadow w-[500px]">
+        <h2 className="text-2xl font-bold mb-1">Your Challenges</h2>
+        <p className="text-sm text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-6 border border-gray-300 rounded-xl shadow w-[500px]">
@@ -25,8 +80,8 @@ export default function ViewChallenges() {
         <div className="flex-1">
           <h3 className="text-lg font-semibold mb-2 underline">Daily</h3>
           <ul className="space-y-3">
-            {daily_challenges.map((challenge, index) => (
-              <li key={index}>
+            {dailyChallenges.map((challenge) => (
+              <li key={challenge.id}>
                 <div className="flex justify-between text-sm font-medium mb-1">
                   <span>{challenge.label}</span>
                   <span>{challenge.progress}%</span>
@@ -39,6 +94,11 @@ export default function ViewChallenges() {
                 </div>
               </li>
             ))}
+            {dailyChallenges.length === 0 && (
+              <li className="text-sm text-gray-500">
+                No daily challenges yet.
+              </li>
+            )}
           </ul>
         </div>
 
@@ -46,8 +106,8 @@ export default function ViewChallenges() {
         <div className="flex-1">
           <h3 className="text-lg font-semibold mb-2 underline">Weekly</h3>
           <ul className="space-y-3">
-            {weekly_challenges.map((challenge, index) => (
-              <li key={index}>
+            {weeklyChallenges.map((challenge) => (
+              <li key={challenge.id}>
                 <div className="flex justify-between text-sm font-medium mb-1">
                   <span>{challenge.label}</span>
                   <span>{challenge.progress}%</span>
@@ -60,6 +120,11 @@ export default function ViewChallenges() {
                 </div>
               </li>
             ))}
+            {weeklyChallenges.length === 0 && (
+              <li className="text-sm text-gray-500">
+                No weekly challenges yet.
+              </li>
+            )}
           </ul>
         </div>
       </div>
