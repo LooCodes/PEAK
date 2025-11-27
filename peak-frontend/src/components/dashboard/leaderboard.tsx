@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 
 export default function ViewLeaderBoard () {
     const leaderboard_pos = 67
@@ -9,7 +10,10 @@ export default function ViewLeaderBoard () {
                     <h2>{leaderboard_pos}</h2>
                 </div>
                 <div className="inline-block">
-                    <a href="/leaderboard" className="font-extrabold hover:underline">View Leaderboard</a>
+                    <Link to="/leaderboard" className="font-extrabold hover:underline">
+                        View Leaderboard
+                    </Link>
+
                     <h2>You're ranked #{leaderboard_pos}</h2>
                     <h2 className="font-light">You have earned {xp_earned} XP this week.</h2>
                 </div>
