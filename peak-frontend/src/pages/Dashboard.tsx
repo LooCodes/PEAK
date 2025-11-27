@@ -59,6 +59,8 @@ export default function Dashboard() {
             <Calendar
               workoutDates={workoutDates}
               mealDates={mealDates}
+              meals={calendarData?.meals ?? []}
+              workouts={calendarData?.workouts ?? []}
             />
             <div className="flex flex-col gap-30">
 

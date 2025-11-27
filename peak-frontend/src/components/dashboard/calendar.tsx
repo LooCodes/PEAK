@@ -1,12 +1,63 @@
 import { useMemo, useState } from "react";
 
+type FoodItem = {
+  foodName: string;
+  qtyGrams: number | null;
+  caloriesPer100g: number;
+  proteinPer100g: number;
+  carbsPer100g: number;
+  fatsPer100g: number;
+  allergens?: string | null;
+};
+
+type Meal = {
+  id: number;
+  eatenAt: string | null; // ISO string from backend
+  createdAt?: string | null;
+  items: FoodItem[];
+};
+
+type WorkoutSet = {
+  id: number;
+  setNo: number;
+  reps: number;
+  weight: number | null;
+  durationSeconds: number | null;
+  calories: number | null;
+  exercise: {
+    id: number;
+    name: string;
+    type: string;
+    muscleGroup: string;
+  };
+};
+
+type Workout = {
+  id: number;
+  performedAt: string | null; // ISO string
+  notes: string | null;
+  sets: WorkoutSet[];
+};
+
 type CalendarProps = {
   workoutDates?: string[];
   mealDates?: string[];
+  meals?: Meal[];
+  workouts?: Workout[];
 };
 
-function Calendar({ workoutDates = [], mealDates = [] }: CalendarProps) {
+function Calendar({
+  workoutDates = [],
+  mealDates = [],
+  meals = [],
+  workouts = [],
+}: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
+
+  // state for popup
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedMeals, setSelectedMeals] = useState<Meal[]>([]);
+  const [selectedWorkouts, setSelectedWorkouts] = useState<Workout[]>([]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -30,7 +81,7 @@ function Calendar({ workoutDates = [], mealDates = [] }: CalendarProps) {
       cells.push(day);
     }
 
-    // ✅ Always render 6 rows (6 * 7 = 42 cells) for fixed height
+    // Always 6 rows = 42 cells
     while (cells.length < 42) {
       cells.push(null);
     }
@@ -59,91 +110,244 @@ function Calendar({ workoutDates = [], mealDates = [] }: CalendarProps) {
     );
   };
 
-  // 🔹 Compute "today" in LOCAL time (not UTC)
+  // today in local time
   const today = new Date();
   const todayYear = today.getFullYear();
-  const todayMonth = today.getMonth() + 1; // 1–12
+  const todayMonth = today.getMonth() + 1;
   const todayDay = today.getDate();
-  const todayKey = `${todayYear}-${String(todayMonth).padStart(2, "0")}-${String(
-    todayDay
-  ).padStart(2, "0")}`;
+  const todayKey = `${todayYear}-${String(todayMonth).padStart(
+    2,
+    "0"
+  )}-${String(todayDay).padStart(2, "0")}`;
+
+  // when user clicks on a day cell
+  const handleDayClick = (dateKey: string, isInteractive: boolean) => {
+    if (!isInteractive) return;
+
+    const mealsForDay = meals.filter(
+      (m) => m.eatenAt && m.eatenAt.startsWith(dateKey)
+    );
+    const workoutsForDay = workouts.filter(
+      (w) => w.performedAt && w.performedAt.startsWith(dateKey)
+    );
+
+    setSelectedDate(dateKey);
+    setSelectedMeals(mealsForDay);
+    setSelectedWorkouts(workoutsForDay);
+  };
+
+  const closeModal = () => {
+    setSelectedDate(null);
+    setSelectedMeals([]);
+    setSelectedWorkouts([]);
+  };
+
+  const prettyDate = (isoDate: string | null) => {
+    if (!isoDate) return "";
+    const d = new Date(isoDate);
+    return d.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
 
   return (
-    <div className="w-full max-w-md bg-[#1a1a1a] p-6 border border-gray-300 rounded-xl shadow">
-      {/* Header with month + arrows */}
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={goToPrevMonth}
-          className="px-2 py-1 text-lg font-semibold hover:bg-[#101010] rounded"
-        >
-          ‹
-        </button>
+    <>
+      <div className="w-full max-w-md bg-[#1a1a1a] p-6 border border-gray-300 rounded-xl shadow relative">
+        {/* Header with month + arrows */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={goToPrevMonth}
+            className="px-2 py-1 text-lg font-semibold hover:bg-[#101010] rounded"
+          >
+            ‹
+          </button>
 
-        <h2 className="text-xl font-bold">
-          {monthName} {year}
-        </h2>
+          <h2 className="text-xl font-bold">
+            {monthName} {year}
+          </h2>
 
-        <button
-          onClick={goToNextMonth}
-          className="px-2 py-1 text-lg font-semibold hover:bg-[#101010] rounded"
-        >
-          ›
-        </button>
-      </div>
+          <button
+            onClick={goToNextMonth}
+            className="px-2 py-1 text-lg font-semibold hover:bg-[#101010] rounded"
+          >
+            ›
+          </button>
+        </div>
 
-      {/* Grid container */}
-      <div className="grid grid-cols-7 gap-1">
-        {/* Weekday labels */}
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-          <div key={day} className="text-center font-semibold text-sm py-1">
-            {day}
-          </div>
-        ))}
+        {/* Grid container */}
+        <div className="grid grid-cols-7 gap-1">
+          {/* Weekday labels */}
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+            <div
+              key={day}
+              className="text-center font-semibold text-sm py-1 text-gray-200"
+            >
+              {day}
+            </div>
+          ))}
 
-        {/* Day cells */}
-        {days.map((day, index) => {
-          if (day === null) {
+          {/* Day cells */}
+          {days.map((day, index) => {
+            if (day === null) {
+              return (
+                <div
+                  key={index}
+                  className="h-14 bg-[#212121] border border-gray-700 rounded"
+                />
+              );
+            }
+
+            const dateKey = formatDate(day);
+            const hasWorkout = workoutDates.includes(dateKey);
+            const hasMeal = mealDates.includes(dateKey);
+            const isToday = dateKey === todayKey;
+            const isInteractive = hasWorkout || hasMeal;
+
             return (
               <div
                 key={index}
-                className="h-14 bg-[#212121] border border-gray-200 rounded"
-              />
-            );
-          }
+                onClick={() => handleDayClick(dateKey, isInteractive)}
+                className={`
+                  relative h-14 border rounded flex flex-col items-center justify-start pt-1
+                  ${
+                    isToday
+                      ? "bg-[#062e03] border-green-500"
+                      : "bg-[#212121] border-gray-700"
+                  }
+                  ${
+                    isInteractive
+                      ? "cursor-pointer hover:bg-[#101010] hover:border-blue-400 hover:shadow-md hover:scale-105 transition-transform transition-colors duration-150"
+                      : ""
+                  }
+                `}
+              >
+                {/* Day number */}
+                <span className="text-sm font-medium">{day}</span>
 
-          const dateKey = formatDate(day);
-
-          const hasWorkout = workoutDates.includes(dateKey);
-          const hasMeal = mealDates.includes(dateKey);
-          const isToday = dateKey === todayKey;
-          const isInteractive = hasWorkout || hasMeal;
-
-          return (
-            <div
-              key={index}
-              className={`
-                relative h-14 border rounded flex flex-col items-center justify-start pt-1
-                ${isToday ? "bg-[#062e03] border-green-500" : "border-gray-300"}
-                ${
-                  isInteractive
-                    ? "cursor-pointer hover:bg-[#101010] hover:border-blue-400 hover:shadow-md hover:scale-105 transition-transform transition-colors duration-150"
-                    : ""
-                }
-              `}
-            >
-              {/* Day number */}
-              <span className="text-sm font-medium">{day}</span>
-
-              {/* Emoji row */}
-              <div className="flex gap-1 mt-1 text-lg leading-none">
-                {hasWorkout && <span>🏋️</span>}
-                {hasMeal && <span>🍎</span>}
+                {/* Emoji row */}
+                <div className="flex gap-1 mt-1 text-lg leading-none">
+                  {hasWorkout && <span>🏋️</span>}
+                  {hasMeal && <span>🍎</span>}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
-    </div>
+
+      {/* Popup modal for selected day */}
+      {selectedDate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-[#111111] text-white rounded-2xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto shadow-2xl border border-gray-700">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">
+                Activity for{" "}
+                {new Date(selectedDate).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </h3>
+              <button
+                onClick={closeModal}
+                className="text-gray-300 hover:text-white text-lg px-2"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Workouts */}
+            <div className="mb-4">
+              <h4 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                🏋️ Workouts
+                <span className="text-sm text-gray-400">
+                  ({selectedWorkouts.length})
+                </span>
+              </h4>
+              {selectedWorkouts.length === 0 ? (
+                <p className="text-sm text-gray-400">No workouts logged.</p>
+              ) : (
+                <div className="space-y-3">
+                  {selectedWorkouts.map((w) => (
+                    <div
+                      key={w.id}
+                      className="border border-gray-700 rounded-lg p-3 bg-[#181818]"
+                    >
+                      <div className="flex justify-between text-sm text-gray-300 mb-1">
+                        <span>{prettyDate(w.performedAt)}</span>
+                        {w.notes && (
+                          <span className="italic text-gray-400">
+                            {w.notes}
+                          </span>
+                        )}
+                      </div>
+                      <ul className="text-sm space-y-1">
+                        {w.sets.map((s) => (
+                          <li key={s.id}>
+                            <span className="font-semibold">
+                              {s.exercise.name}
+                            </span>{" "}
+                            — set {s.setNo}: {s.reps} reps
+                            {s.weight !== null && <> @ {s.weight} kg</>}
+                            {s.durationSeconds && (
+                              <> • {Math.round(s.durationSeconds / 60)} min</>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Meals */}
+            <div>
+              <h4 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                🍎 Meals
+                <span className="text-sm text-gray-400">
+                  ({selectedMeals.length})
+                </span>
+              </h4>
+              {selectedMeals.length === 0 ? (
+                <p className="text-sm text-gray-400">No meals logged.</p>
+              ) : (
+                <div className="space-y-3">
+                  {selectedMeals.map((m) => (
+                    <div
+                      key={m.id}
+                      className="border border-gray-700 rounded-lg p-3 bg-[#181818]"
+                    >
+                      <div className="text-sm text-gray-300 mb-1">
+                        {prettyDate(m.eatenAt)}
+                      </div>
+                      <ul className="text-sm space-y-1">
+                        {m.items.map((item, idx) => (
+                          <li key={idx}>
+                            <span className="font-semibold">
+                              {item.foodName}
+                            </span>{" "}
+                            {item.qtyGrams !== null && (
+                              <span className="text-gray-300">
+                                — {item.qtyGrams} g
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
