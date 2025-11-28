@@ -10,6 +10,7 @@ import Leaderboard from "./pages/Leaderboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Nutrition from "./pages/Nutrition";
+import Profile from "./pages/Profile";
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(true); // This is only used for testing purposes
@@ -47,8 +48,14 @@ const App = () => {
             }
           />
           <Route path="/nutrition" element={<Nutrition />} />
-          <Route path="/nutrition/search" element={<Nutrition />} />
-          <Route path="/nutrition/search/:code" element={<Nutrition />} />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
