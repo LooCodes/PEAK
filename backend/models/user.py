@@ -16,6 +16,8 @@ class User(Base):
     streak = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
+    weekly_xp = Column(Integer, default=0, nullable=False)
+    total_xp = Column(Integer, default=0, nullable=False)
 
     meals = relationship("Meal", back_populates="user", cascade="all, delete-orphan")
     workouts = relationship("Workout", back_populates="user", cascade="all, delete-orphan")
