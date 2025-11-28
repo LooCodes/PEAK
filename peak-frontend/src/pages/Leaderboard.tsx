@@ -132,7 +132,7 @@ type LeaderboardEntry = {
   }: PodiumBlockProps) {
     return (
       <div className="flex flex-col items-center gap-2 ">
-        <span className="text-sm font-medium text-slate-800">
+        <span className="text-sm font-medium">
           {entry.name}
         </span>
         <div
