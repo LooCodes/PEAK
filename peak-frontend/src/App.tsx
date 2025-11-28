@@ -9,6 +9,7 @@ import Questionnaire from "./pages/Questionnaire";
 import Leaderboard from "./pages/Leaderboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Profile from "./pages/Profile";
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(true); // This is only used for testing purposes
@@ -42,6 +43,14 @@ const App = () => {
             element={
               <ProtectedRoute>
                 <Leaderboard/>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             }
           />

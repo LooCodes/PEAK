@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 from db import Base, engine
 from models import *   # noqa: F401,F403 (loads User, Meal, Workout, etc.)
-from .routers import dashboard, auth, nutrition, leaderboard
+from .routers import dashboard, auth, nutrition, leaderboard, challenges
 
 load_dotenv()
 
@@ -43,3 +43,6 @@ app.include_router(nutrition.router)
 
 # Leaderboard router
 app.include_router(leaderboard.router)
+
+# Challenges router
+app.include_router(challenges.router)
