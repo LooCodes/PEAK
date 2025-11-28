@@ -38,8 +38,7 @@ app.include_router(auth.router)
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 
 # Nutrition router
-app.include_router(nutrition.router)
-
+app.include_router(nutrition.router, prefix="/api")
 
 # Leaderboard router
 app.include_router(leaderboard.router)

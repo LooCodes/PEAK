@@ -1,4 +1,3 @@
-// src/pages/Leaderboard.tsx
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
@@ -182,16 +181,16 @@ export default function Leaderboard() {
 type PodiumBlockProps = {
     position: "1st" | "2nd" | "3rd";
     entry: LeaderboardEntry;
-    heightClass: string; // e.g. "h-36"
+    heightClass: string;
     highlight?: boolean;
     bgColor: string;
   };
 
-  const podiumColors = {
-    "1st": "bg-[#d8b13d]",
-    "2nd": "bg-[#a9b0b4]",
-    "3rd": "bg-[#674019]",
-  };
+const podiumColors = {
+  "1st": "bg-[#d8b13d]",
+  "2nd": "bg-[#a9b0b4]",
+  "3rd": "bg-[#674019]",
+};
   
   function PodiumBlock({
     position,

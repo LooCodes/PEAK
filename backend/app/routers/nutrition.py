@@ -61,7 +61,7 @@ def search_foods(query: str):
         item = FoodSearchItem(
             code=p.get("code"),
             name=p.get("product_name", "Unknown"),
-            calories_per_100g=p.get("energy-kcal_100g"),
+            calories_per_100g=nutr.get("energy-kcal_100g"),
         )
 
         results.append(item)
