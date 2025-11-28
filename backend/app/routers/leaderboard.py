@@ -5,9 +5,10 @@ from typing import List
 
 from db.session import SessionLocal
 from models.user import User
-from models.leaderboard import LeaderboardEntry
+# We no longer need LeaderboardEntry for weekly ranking logic
+# from models.leaderboard import LeaderboardEntry
 from auth import get_current_user
-from schemas.leaderboard import LeaderboardItem
+from schemas.leaderboard import LeaderboardItem, LeaderboardSummary
 
 
 router = APIRouter(prefix="/leaderboard", tags=["leaderboard"])
@@ -21,25 +22,29 @@ def get_db():
         db.close()
 
 
-
-
 # ---------- Helper to build the weekly leaderboard ----------
+# Now based purely on users.weekly_xp
 
 def _build_weekly_leaderboard(db: Session) -> List[LeaderboardItem]:
-    # Join users with leaderboard entries and sort by points desc
+    """
+    Build the weekly leaderboard from the users table:
+
+    - Order users by users.weekly_xp DESC, then by users.id ASC for stability.
+    - For API compatibility, we still expose the field as `weekly_points`,
+      but its value is actually users.weekly_xp.
+    """
     rows = (
-        db.query(User.username, LeaderboardEntry.weekly_points)
-        .join(LeaderboardEntry, LeaderboardEntry.user_id == User.id)
-        .order_by(LeaderboardEntry.weekly_points.desc(), User.id.asc())
+        db.query(User)
+        .order_by(User.weekly_xp.desc(), User.id.asc())
         .all()
     )
 
     leaderboard: List[LeaderboardItem] = []
-    for idx, row in enumerate(rows, start=1):
+    for idx, user in enumerate(rows, start=1):
         leaderboard.append(
             LeaderboardItem(
-                username=row.username,
-                weekly_points=row.weekly_points,
+                username=user.username,
+                weekly_points=user.weekly_xp or 0,  # 👈 this is your weekly_xp
                 rank=idx,
             )
         )
@@ -51,7 +56,7 @@ def _build_weekly_leaderboard(db: Session) -> List[LeaderboardItem]:
 @router.get("/weekly", response_model=List[LeaderboardItem])
 def get_weekly_leaderboard(db: Session = Depends(get_db)):
     """
-    Full weekly leaderboard (sorted by weekly_points desc).
+    Full weekly leaderboard (sorted by users.weekly_xp desc).
     """
     return _build_weekly_leaderboard(db)
 
@@ -63,6 +68,9 @@ def get_my_weekly_rank(
 ):
     """
     Current user's weekly points + rank.
+
+    - Rank is computed from users.weekly_xp.
+    - weekly_points in the response is actually users.weekly_xp.
     """
     leaderboard = _build_weekly_leaderboard(db)
 
@@ -70,8 +78,54 @@ def get_my_weekly_rank(
         if item.username == current_user.username:
             return item
 
-    # Fallback: user has no leaderboard entry (shouldn't happen now)
+    # Fallback: user not found in leaderboard (shouldn't happen if they exist in users)
     raise HTTPException(
         status_code=404,
         detail="Leaderboard entry not found for current user",
+    )
+
+
+# ---------- Summary endpoint for dashboard card ----------
+
+@router.get("/me/summary", response_model=LeaderboardSummary)
+def get_my_dashboard_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Compact summary for the dashboard card:
+
+    - Rank in the weekly leaderboard, computed from users.weekly_xp.
+    - weekly_xp from users.weekly_xp.
+    - weekly_points mirrors weekly_xp for compatibility with existing types.
+    """
+
+    # 1) Compute rank based on users.weekly_xp
+    rows = (
+        db.query(User.id, User.weekly_xp)
+        .order_by(User.weekly_xp.desc(), User.id.asc())
+        .all()
+    )
+
+    rank: int | None = None
+    weekly_points: int = 0
+
+    for idx, row in enumerate(rows, start=1):
+        if row.id == current_user.id:
+            rank = idx
+            weekly_points = row.weekly_xp or 0
+            break
+
+    # 2) weekly_xp from the users table for this logged-in user
+    weekly_xp = current_user.weekly_xp or 0
+
+    # If for some reason the user wasn't in the rows (shouldn't happen),
+    # just default rank to None and weekly_points = weekly_xp.
+    if rank is None:
+        weekly_points = weekly_xp
+
+    return LeaderboardSummary(
+        rank=rank,
+        weekly_xp=weekly_xp,
+        weekly_points=weekly_points,
     )

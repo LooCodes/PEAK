@@ -10,20 +10,25 @@ from models import (
     Workout,
     WorkoutSet,
     Exercise,
+    User,  # optional, but nice for type hints
 )
+from auth import get_current_user  # 👈 use your existing auth dependency
 
 router = APIRouter()
 
 
 @router.get("/")
-def get_calendar_data(db: Session = Depends(get_db)):
+def get_calendar_data(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),  # 👈 logged-in user
+):
     """
-    Calendar + dashboard data for a single user.
-    For now we hardcode user_id=6 (onlylazo) until auth is wired up.
+    Calendar + dashboard data for the *logged-in* user.
+
+    Uses current_user.id from auth instead of a hardcoded user_id.
     """
 
-    # TODO: replace this with current_user.id once auth is implemented
-    user_id = 6
+    user_id = current_user.id  # 👈 no more hardcoding
 
     # ----- Query meals + workouts just for this user -----
     meals = (

@@ -1,132 +1,165 @@
+// src/components/dashboard/challenges.tsx
 import { useEffect, useState } from "react";
-import { useAuth } from "../../context/AuthContext"; // adjust path if needed
+import { useAuth } from "../../context/AuthContext";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 type Challenge = {
   id: number;
-  label: string;
-  progress: number; // 0–100
+  type: string;
+  title: string | null;
+  description: string | null;
+  points: number;
 };
 
-type ChallengesResponse = {
-  daily: Challenge[];
-  weekly: Challenge[];
+type UserChallenge = {
+  challenge_id: number;
+  completed_at: string | null;
 };
 
-export default function ViewChallenges() {
-  const [dailyChallenges, setDailyChallenges] = useState<Challenge[]>([]);
-  const [weeklyChallenges, setWeeklyChallenges] = useState<Challenge[]>([]);
+type CompleteResponse = {
+  completed: boolean;
+  weekly_xp?: number;
+  total_xp?: number;
+};
+
+type ViewChallengesProps = {
+  onChallengeCompleted?: (payload: CompleteResponse, challengeId: number) => void;
+};
+
+export default function ViewChallenges({ onChallengeCompleted }: ViewChallengesProps) {
+  const { token } = useAuth();
+
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [completed, setCompleted] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // if your app doesn’t use a token, you can delete useAuth + Authorization header
-  const { token } = useAuth();
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 
   useEffect(() => {
-    const fetchChallenges = async () => {
+    const load = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/dashboard/challenges`, {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          credentials: "include", // keep if you use cookies for auth
+        // 1) Load global challenges
+        const chRes = await fetch(`${API_BASE_URL}/api/challenges/`, {
+          credentials: "include",
         });
+        if (!chRes.ok) throw new Error("Failed loading challenges");
+        const allChallenges: Challenge[] = await chRes.json();
+        setChallenges(allChallenges);
 
-        if (!res.ok) {
-          throw new Error(`Request failed with status ${res.status}`);
+        // 2) Load user's completed challenges
+        if (token) {
+          const ucRes = await fetch(`${API_BASE_URL}/api/challenges/user`, {
+            headers,
+            credentials: "include",
+          });
+
+          if (ucRes.ok) {
+            const userCh: UserChallenge[] = await ucRes.json();
+            const completedSet = new Set(
+              userCh.filter((c) => c.completed_at).map((c) => c.challenge_id)
+            );
+            setCompleted(completedSet);
+          }
         }
-
-        const data: ChallengesResponse = await res.json();
-        setDailyChallenges(data.daily || []);
-        setWeeklyChallenges(data.weekly || []);
       } catch (err) {
         console.error(err);
-        setError("Could not load challenges.");
+        setError("Could not load challenges");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchChallenges();
+    load();
   }, [token]);
+
+  const toggleComplete = async (challengeId: number) => {
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/challenges/user/${challengeId}/complete`,
+        {
+          method: "POST",
+          headers,
+          credentials: "include",
+        }
+      );
+
+      if (!res.ok) throw new Error("Could not complete challenge");
+
+      const body: CompleteResponse = await res.json();
+
+      setCompleted((prev) => new Set(prev).add(challengeId));
+
+      // 🔔 Tell the parent (Dashboard) so it can refresh leaderboard/XP
+      if (onChallengeCompleted) {
+        onChallengeCompleted(body, challengeId);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to mark challenge complete");
+    }
+  };
 
   if (loading) {
     return (
-      <div className="bg-white p-6 border border-gray-300 rounded-xl shadow w-[500px]">
-        <h2 className="text-2xl font-bold mb-1">Your Challenges</h2>
-        <p className="text-sm text-gray-500">Loading challenges...</p>
+      <div className="bg-[#1a1a1a] p-4 rounded-xl">
+        Loading challenges...
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white p-6 border border-gray-300 rounded-xl shadow w-[500px]">
-        <h2 className="text-2xl font-bold mb-1">Your Challenges</h2>
-        <p className="text-sm text-red-500">{error}</p>
+      <div className="bg-[#1a1a1a] p-4 rounded-xl text-red-500">
+        {error}
       </div>
     );
   }
 
+  const daily = challenges.filter((c) => c.type.toLowerCase() === "daily");
+  const weekly = challenges.filter((c) => c.type.toLowerCase() === "weekly");
+
+  const renderRow = (c: Challenge) => {
+    const isDone = completed.has(c.id);
+
+    return (
+      <div key={c.id} className="flex justify-between items-center py-2">
+        <div>
+          <p className="font-semibold text-sm">{c.title}</p>
+          {c.description && (
+            <p className="text-xs text-gray-400">{c.description}</p>
+          )}
+          <p className="text-xs text-gray-500">{c.points} XP</p>
+        </div>
+
+        <input
+          type="checkbox"
+          checked={isDone}
+          disabled={isDone}
+          onChange={() => toggleComplete(c.id)}
+          className="w-5 h-5 accent-green-500 cursor-pointer"
+        />
+      </div>
+    );
+  };
+
   return (
-    <div className="bg-white p-6 border border-gray-300 rounded-xl shadow w-[500px]">
-      <h2 className="text-2xl font-bold mb-1">Your Challenges</h2>
+    <div className="bg-[#1a1a1a] p-6 border border-gray-300 rounded-xl shadow w-[500px]">
+      <h2 className="text-lg font-bold mb-3">Challenges</h2>
 
-      <div className="flex gap-8 px-2">
-        {/* Daily */}
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold mb-2 underline">Daily</h3>
-          <ul className="space-y-3">
-            {dailyChallenges.map((challenge) => (
-              <li key={challenge.id}>
-                <div className="flex justify-between text-sm font-medium mb-1">
-                  <span>{challenge.label}</span>
-                  <span>{challenge.progress}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="h-2 rounded-full bg-emerald-500"
-                    style={{ width: `${challenge.progress}%` }}
-                  />
-                </div>
-              </li>
-            ))}
-            {dailyChallenges.length === 0 && (
-              <li className="text-sm text-gray-500">
-                No daily challenges yet.
-              </li>
-            )}
-          </ul>
-        </div>
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold">Daily</h3>
+        {daily.map(renderRow)}
+      </div>
 
-        {/* Weekly */}
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold mb-2 underline">Weekly</h3>
-          <ul className="space-y-3">
-            {weeklyChallenges.map((challenge) => (
-              <li key={challenge.id}>
-                <div className="flex justify-between text-sm font-medium mb-1">
-                  <span>{challenge.label}</span>
-                  <span>{challenge.progress}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="h-2 rounded-full bg-blue-500"
-                    style={{ width: `${challenge.progress}%` }}
-                  />
-                </div>
-              </li>
-            ))}
-            {weeklyChallenges.length === 0 && (
-              <li className="text-sm text-gray-500">
-                No weekly challenges yet.
-              </li>
-            )}
-          </ul>
-        </div>
+      <div>
+        <h3 className="text-sm font-semibold">Weekly</h3>
+        {weekly.map(renderRow)}
       </div>
     </div>
   );
