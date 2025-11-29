@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Nutrition from "./pages/Nutrition";
 import Profile from "./pages/Profile";
+import Exercise from "./pages/Exercise";
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(true); // This is only used for testing purposes
@@ -48,6 +49,7 @@ const App = () => {
             }
           />
           <Route path="/nutrition" element={<Nutrition />} />
+          <Route path="/exercise" element={<Exercise />} />
           <Route
             path="/profile"
             element={
