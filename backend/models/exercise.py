@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Numeric, ForeignKey, UniqueConstraint, Index
+from sqlalchemy import Column, Integer, String, DateTime, Numeric, ForeignKey, UniqueConstraint, Index, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from db.base import Base
@@ -12,11 +12,20 @@ class Exercise(Base):
     ## can enum later
     type = Column(String, nullable=False)
     muscle_group = Column(String, nullable=False)
+
+    # ExerciseDB API fields
+    body_part = Column(String, nullable=True, index=True)
+    equipment_type = Column(String, nullable=True, index=True)
+    thumbnail_url = Column(String, nullable=True)
+    gif_url = Column(String, nullable=True)
+    instructions = Column(Text, nullable=True)  # JSON array stored as text
+    external_id = Column(String, nullable=True, unique=True)  # ExerciseDB API ID
     ##
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
     sets = relationship("WorkoutSet", back_populates="exercise", cascade="all, delete-orphan")
+    user_workout_exercises = relationship("UserWorkoutExercise", back_populates="exercise", cascade="all, delete-orphan")
 
 class Workout(Base):
     __tablename__ = "workouts"
@@ -49,3 +58,18 @@ class WorkoutSet(Base):
 
     workout = relationship("Workout", back_populates="sets")
     exercise = relationship("Exercise", back_populates="sets")
+
+class UserWorkoutExercise(Base):
+    __tablename__ = "user_workout_exercises"
+    __table_args__ = (
+        Index("ix_user_workout_exercises_user_id", "user_id"),
+        Index("ix_user_workout_exercises_exercise_id", "exercise_id"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user = relationship("User", back_populates="user_workout_exercises")
+    exercise = relationship("Exercise", back_populates="user_workout_exercises")

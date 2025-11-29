@@ -1,11 +1,13 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import os
 from dotenv import load_dotenv
+import traceback
 
 from db import Base, engine
 from models import *   # noqa: F401,F403 (loads User, Meal, Workout, etc.)
-from .routers import dashboard, auth, nutrition, leaderboard, challenges
+from .routers import dashboard, auth, nutrition, leaderboard, challenges, exercises
 
 load_dotenv()
 
@@ -13,6 +15,15 @@ load_dotenv()
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="PEAK Backend", version="0.1.0")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    print(f"ERROR: {exc}")
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "traceback": traceback.format_exc()}
+    )
 
 # Configure CORS
 origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
@@ -45,3 +56,6 @@ app.include_router(leaderboard.router)
 
 # Challenges router
 app.include_router(challenges.router)
+
+# Exercises router
+app.include_router(exercises.router)
