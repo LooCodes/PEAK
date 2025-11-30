@@ -5,9 +5,13 @@ from db.base import Base
 
 class Food(Base):
     __tablename__ = "foods"
-    __table_args__ = (UniqueConstraint("name", name="uq_foods_name"),)
+    __table_args__ = (
+        Index("ix_foods_name", "name"),
+        UniqueConstraint("openfood_code", name="uq_foods_openfood_code")
+    )
 
     id = Column(Integer, primary_key=True)
+    openfood_code = Column(String, nullable=True, index=True) # Stores the id of the food from the API
     name = Column(String, nullable=False)
     calories_per_100g = Column(Numeric(8, 2), nullable=False)
     protein_per_100g  = Column(Numeric(8, 2), nullable=False)
@@ -26,7 +30,6 @@ class Meal(Base):
     eaten_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-
     user = relationship("User", back_populates="meals")
     items = relationship("MealItem", back_populates="meal", cascade="all, delete-orphan")
 
@@ -39,7 +42,7 @@ class MealItem(Base):
     id = Column(Integer, primary_key=True)
     meal_id = Column(Integer, ForeignKey("meals.id"), nullable=False)
     food_id = Column(Integer, ForeignKey("foods.id"), nullable=False)
-    qty = Column(Numeric(8, 2), nullable=False)  # grams
+    qty = Column(Numeric(8, 2), nullable=False)
 
 
     meal = relationship("Meal", back_populates="items")

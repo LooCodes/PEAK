@@ -1,13 +1,13 @@
 import { useAuth } from "../../context/AuthContext";
 
-const FoodResultItem = ({name, calories, code, onPress}: {name: string, calories: number, code: string, onPress: (code: string) => void}) => {
+const FoodResultItem = ({ name, calories, openfood_code, onPress}: { name: string, calories: number, openfood_code: string | null, onPress: (code: string | null) => void}) => {
     const { isAuthenticated } = useAuth();
 
     return (
         <div 
             onClick={() => {
-                onPress(code);
-                console.log(`Pressed section ${name} with code: ${code}`);
+                onPress(openfood_code);
+                console.log(`Pressed section ${name} with code: ${openfood_code}`);
             }}
             className="w-full px-5 py-4 rounded-2xl bg-[#1a1a1a] border flex justify-between items-center hover:bg-[#101010] cursor-pointer transition mb-4"
         >
@@ -26,7 +26,7 @@ const FoodResultItem = ({name, calories, code, onPress}: {name: string, calories
                 <button
                 onClick={(e) => {
                     e.stopPropagation();
-                    console.log(`Tapped click of section ${name} with code: ${code}`);
+                    console.log(`Tapped click of section ${name} with code: ${openfood_code}`);
                 }}
                 className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700"
                 >

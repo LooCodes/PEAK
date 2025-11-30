@@ -13,7 +13,7 @@ import Nutrition from "./pages/Nutrition";
 import Profile from "./pages/Profile";
 
 const App = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // This is only used for testing purposes
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   return (
     <BrowserRouter>

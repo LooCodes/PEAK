@@ -4,7 +4,8 @@ import FoodResultItem from "../components/nutrition/FoodResultItem";
 import NutritionInformation from "../components/nutrition/NutritionInformation";
 
 type FoodSearchItem = {
-  code: string;
+  id: number;
+  openfood_code: string | null;
   name: string;
   calories_per_100g: number | null;
 };
@@ -22,21 +23,17 @@ const Nutrition = () => {
 
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
-    const trimmed = query.trim();
-    if (!trimmed) return;
 
     try {
       setLoading(true);
       setError(null);
 
       const res = await api.get<FoodSearchResponse>("/nutrition/search", {
-        params: { query: trimmed },
+        params: { query: query },
       });
 
-      console.log("Nutrition search results:", res.data);
       setResults(res.data.results || []);
     } catch (err) {
-      console.error("Error searching nutrition:", err);
       setError("Failed to fetch foods. Please try again.");
     } finally {
       setLoading(false);
@@ -82,22 +79,20 @@ const Nutrition = () => {
 
             {/* Results list */}
             <div className="space-y-0">
-                {results.map((item) => (
-                    <FoodResultItem
-                        key={`${item.code}-${item.name}`}
-                        name={item.name}
-                        calories={item.calories_per_100g ?? 0}
-                        code={item.code}
-                        onPress={(code) => {
-                            setSelectedCode(code);
-                        }}
-                    />
+                {results.filter(item => item.name && item.name.trim() !== "").map(item => (
+                  <FoodResultItem
+                    key={`${item.openfood_code}-${item.name}`}
+                    name={item.name}
+                    calories={item.calories_per_100g ?? 0}
+                    openfood_code={item.openfood_code}
+                    onPress={(code) => setSelectedCode(code)}
+                  />
                 ))}
             </div>
         </div>
         {selectedCode && (
             <NutritionInformation
-            code={selectedCode}
+            openfood_code={selectedCode}
             onClose={() => setSelectedCode(null)}
             />
         )}

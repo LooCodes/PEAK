@@ -132,9 +132,9 @@ export default function ViewChallenges({ onChallengeCompleted }: ViewChallengesP
         <div>
           <p className="font-semibold text-sm">{c.title}</p>
           {c.description && (
-            <p className="text-xs text-gray-400">{c.description}</p>
+            <p className="text-xs">{c.description}</p>
           )}
-          <p className="text-xs text-gray-500">{c.points} XP</p>
+          <p className="text-xs">{c.points} XP</p>
         </div>
 
         <input

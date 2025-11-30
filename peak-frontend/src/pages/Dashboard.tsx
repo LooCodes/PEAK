@@ -1,4 +1,3 @@
-// src/pages/Dashboard.tsx
 import { useEffect, useState } from "react";
 
 import Calendar from "../components/dashboard/calendar";
@@ -86,33 +85,35 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
+    <div className="min-h-screen pt-24 px-6 flex justify-center">
+      <div className="w-full max-w-6xl">
+        <h1 className="text-2xl font-bold mb-4 text-center">Dashboard</h1>
 
-      {loading && <p>Loading your dashboard...</p>}
-      {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+        {loading && <p>Loading your dashboard...</p>}
+        {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
 
-      {!loading && !error && calendarData && (
-        <>
-          <div className="flex gap-20">
-            <Calendar
-              workoutDates={workoutDates}
-              mealDates={mealDates}
-              meals={calendarData.meals}
-              workouts={calendarData.workouts}
-            />
+        {!loading && !error && calendarData && (
+          <>
+            <div className="flex gap-50">
+              <Calendar
+                workoutDates={workoutDates}
+                mealDates={mealDates}
+                meals={calendarData.meals}
+                workouts={calendarData.workouts}
+              />
 
-            <div className="flex flex-col gap-30">
-              <ViewLeaderBoard refreshKey={leaderboardRefreshKey} />
-              <ViewChallenges onChallengeCompleted={handleChallengeCompleted} />
+              <div className="flex flex-col gap-30">
+                <ViewLeaderBoard refreshKey={leaderboardRefreshKey} />
+                <ViewChallenges onChallengeCompleted={handleChallengeCompleted} />
+              </div>
             </div>
-          </div>
 
-          <div className="mt-12 flex justify-center">
-            <WorkoutMeal />
-          </div>
-        </>
-      )}
+            <div className="mt-12 flex justify-center">
+              <WorkoutMeal />
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
