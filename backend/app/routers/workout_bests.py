@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from db.database import SessionLocal
-from models.exercise import Exercise, WorkoutSet
+from models.exercise import Exercise, WorkoutSet, Workout
 from models.user import User
 from schemas.workout_bests import WorkoutBest
 from auth import get_current_user
@@ -28,31 +28,48 @@ def get_workout_bests(
     """
     Get the user's personal bests (max weight) for each exercise they've done.
     """
-    # Query workout sets for this user, grouped by exercise
-    # For each exercise, find the max weight and the reps at that weight
-    result = (
+    # 1) find max weight per exercise for this user's workouts
+    subq = (
         db.query(
-            Exercise.id,
-            Exercise.name,
+            WorkoutSet.exercise_id.label("exercise_id"),
             func.max(WorkoutSet.weight).label("max_weight"),
-            WorkoutSet.reps.label("reps_at_max"),
         )
-        .join(WorkoutSet, WorkoutSet.exercise_id == Exercise.id)
-        .filter(WorkoutSet.user_id == current_user.id)
-        .group_by(Exercise.id, Exercise.name, WorkoutSet.reps)
+        .join(Workout, Workout.id == WorkoutSet.workout_id)
+        .filter(Workout.user_id == current_user.id)
+        .group_by(WorkoutSet.exercise_id)
+        .subquery()
+    )
+
+    rows = (
+        db.query(Exercise.id, Exercise.name, subq.c.max_weight)
+        .join(subq, subq.c.exercise_id == Exercise.id)
         .order_by(Exercise.name.asc())
         .all()
     )
 
     bests = []
-    for row in result:
-        exercise_id, exercise_name, max_weight, reps = row
+    for exercise_id, exercise_name, max_weight in rows:
+        reps = 0
+        if max_weight is not None:
+            reps_row = (
+                db.query(func.max(WorkoutSet.reps))
+                .join(Workout, Workout.id == WorkoutSet.workout_id)
+                .filter(
+                    Workout.user_id == current_user.id,
+                    WorkoutSet.exercise_id == exercise_id,
+                    WorkoutSet.weight == max_weight,
+                )
+                .first()
+            )
+            if reps_row and reps_row[0] is not None:
+                reps = int(reps_row[0])
+
         bests.append(
             WorkoutBest(
                 exercise_id=exercise_id,
                 exercise_name=exercise_name,
                 max_weight=max_weight,
-                reps_at_max=reps or 0,
+                reps_at_max=reps,
             )
         )
 

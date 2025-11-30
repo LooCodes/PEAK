@@ -32,6 +32,8 @@ class UserResponse(BaseModel):
     height: Optional[int] = None
     weight: Optional[int] = None
     streak: int = 0
+    total_xp: int = 0
+    first_name: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
