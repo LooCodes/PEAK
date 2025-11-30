@@ -5,10 +5,12 @@ interface User {
   id: number;
   username: string;
   email: string;
+  first_name?: string;
   age?: number;
   height?: number;
   weight?: number;
   streak: number;
+  total_xp?: number;
   created_at: string;
 }
 

@@ -1,25 +1,28 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ProgressBar from "../components/questionnaire/ProgressBar";
 import QuestionnaireSection from "../components/questionnaire/QuestionnaireSection";
 import NextButton from "../components/questionnaire/NextButton";
-
-type Question = {
-  id: number;
-  text: string;
-};
-
-//questions to be displayed
-const questions: Question[] = [
-  { id: 1, text: "I want to use freeweights." },
-  { id: 2, text: "I want to become leaner." },
-  { id: 3, text: "I want to gain weight." },
-  { id: 4, text: "I exercise often." },
-  { id: 5, text: "I have experience with gym equipment." },
-];
+import api from "../api/axios";
+import { useNavigate } from "react-router-dom";
 
 export default function Questionnaire() {
   //this area will store the answers to the questions
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [questions, setQuestions] = useState<Array<{ id: number; text: string }>>([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let mounted = true;
+    api
+      .get("/questionnaire/questions")
+      .then((res) => {
+        if (mounted) setQuestions(res.data || []);
+      })
+      .catch((err) => console.error("Failed to load questions", err));
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleAnswerChange = (id: number, value: string) => {
     setAnswers((prev) => ({
@@ -33,6 +36,16 @@ export default function Questionnaire() {
     (q) => (answers[q.id] ?? "").length > 0
   ).length;
 
+  const handleSubmit = async () => {
+    try {
+      await api.post("/questionnaire/answers", { answers });
+      navigate('/profile');
+    } catch (err) {
+      console.error('Failed to submit answers', err);
+      alert('Failed to submit questionnaire.');
+    }
+  };
+
   return (
     <div className="space-y-8 pt-24">
       <h1 className="text-3xl font-bold text-center">Questionnaire</h1>
@@ -41,7 +54,6 @@ export default function Questionnaire() {
         currentStep={answeredCount}
         totalSteps={questions.length}
       />
-
       <QuestionnaireSection
         topic="Training Preferences"
         questions={questions}
@@ -49,12 +61,7 @@ export default function Questionnaire() {
         onAnswerChange={handleAnswerChange}
       />
 
-      <NextButton
-        isLastStep={false}
-        onClick={() => {
-          console.log("Next clicked (placeholder)");
-        }}
-      />
+      <NextButton isLastStep={true} onClick={handleSubmit} />
     </div>
   );
 }
