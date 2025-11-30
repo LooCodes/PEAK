@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 import json
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import Optional, List
 import requests
 from datetime import datetime
@@ -170,6 +171,7 @@ def map_exercisedb_to_exercise(api_exercise: dict, index: int) -> dict:
         "external_id": exercise_id,
     }
 
+
 def get_or_create_exercise_from_external(
     db: Session,
     external_id: str,
@@ -178,8 +180,11 @@ def get_or_create_exercise_from_external(
     Given an ExerciseDB exerciseId (external_id), either:
     - return existing Exercise row, or
     - fetch detail from ExerciseDB, insert into `exercises`, and return it.
-    """
 
+    ✅ This is where we handle:
+      - Case 1: Exercise doesn't exist in `exercises` yet → create it.
+      - Case 3: It already exists → just reuse it.
+    """
     # 1) Try existing record by external_id
     existing = db.query(Exercise).filter(Exercise.external_id == external_id).first()
     if existing:
@@ -213,11 +218,27 @@ def get_or_create_exercise_from_external(
         external_id=mapped.get("external_id") or external_id,
     )
 
-    db.add(ex)
-    db.commit()
-    db.refresh(ex)
+    try:
+        db.add(ex)
+        db.commit()
+        db.refresh(ex)
+        return ex
+    except IntegrityError:
+        # In case some unique constraint hit at the same time (race condition, etc.)
+        db.rollback()
+        # Try to re-load by external_id first
+        ex = db.query(Exercise).filter(Exercise.external_id == external_id).first()
+        if ex:
+            return ex
+        # As a last resort, try name match
+        ex = db.query(Exercise).filter(Exercise.name == mapped["name"]).first()
+        if ex:
+            return ex
+        raise HTTPException(
+            status_code=500,
+            detail="An error occurred while saving exercise.",
+        )
 
-    return ex
 
 # ---------- Mock data (fallback) ----------
 
@@ -255,6 +276,7 @@ MOCK_EXERCISES = [
         ],
         "external_id": "0002",
     },
+    # ... rest of your MOCK_EXERCISES unchanged ...
     {
         "id": 3,
         "name": "Pull-ups",
@@ -491,7 +513,6 @@ def get_saved_exercises(
     return ExerciseListResponse(exercises=exercise_responses)
 
 
-
 @router.get("/{exercise_id}", response_model=ExerciseResponse)
 def get_exercise_by_id(
     exercise_id: str,
@@ -559,23 +580,30 @@ def add_exercise_to_workout(
 
     We treat `exercise_data.exercise_id` as:
     - the ExerciseDB exerciseId (string), e.g. "exr_41n2h...",
-      or as a fallback, a numeric id of a local Exercise.
+    - OR a numeric id of a local Exercise.
+
+    ✅ Logic:
+      Case 1: Exercise doesn't exist in `exercises` → create in `exercises` AND link to this user.
+      Case 2: Same user re-adds → detect via user_workout_exercises and return 400.
+      Case 3: Different user adds → re-use existing Exercise and add a new user_workout_exercises row.
     """
+    raw_id = str(exercise_data.exercise_id).strip()
 
-    # Normalize to string so we can use it for external_id when needed
-    raw_id = str(exercise_data.exercise_id)
+    # 1) Resolve to an Exercise row (global)
+    exercise_row: Optional[Exercise] = None
 
-    # If it looks like an ExerciseDB id (starts with "exr_"), treat as external_id
     if raw_id.startswith("exr_"):
+        # External ExerciseDB ID
         exercise_row = get_or_create_exercise_from_external(db, raw_id)
-    else:
-        # Fallback: assume it's a local exercises.id
+    elif raw_id.isdigit():
+        # Numeric local ID
         exercise_row = db.query(Exercise).filter(Exercise.id == int(raw_id)).first()
-        if not exercise_row:
-            raise HTTPException(status_code=404, detail="Exercise not found")
 
-    # Check if user already has this exercise in their workout
-    existing = (
+    if not exercise_row:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+
+    # 2) Check if this user already has this exercise saved
+    existing_link = (
         db.query(UserWorkoutExercise)
         .filter(
             UserWorkoutExercise.user_id == current_user.id,
@@ -584,12 +612,13 @@ def add_exercise_to_workout(
         .first()
     )
 
-    if existing:
+    if existing_link:
+        # Case 2
         raise HTTPException(
             status_code=400, detail="Exercise already added to your workout"
         )
 
-    # Create user_workout_exercises row
+    # 3) Create user-specific link (handles Case 1 + Case 3)
     workout_exercise = UserWorkoutExercise(
         user_id=current_user.id,
         exercise_id=exercise_row.id,  # numeric FK to exercises.id
@@ -609,4 +638,3 @@ def add_exercise_to_workout(
             created_at=workout_exercise.created_at,
         ),
     )
-
