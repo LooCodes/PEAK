@@ -48,7 +48,8 @@ const Register = () => {
         weight: formData.weight ? parseFloat(formData.weight) : undefined,
       });
       console.log("registered:", register)
-      navigate('/dashboard');
+        // Navigate to questionnaire for the user to complete
+        navigate('/questionnaire');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Registration failed. Please try again.');
     } finally {

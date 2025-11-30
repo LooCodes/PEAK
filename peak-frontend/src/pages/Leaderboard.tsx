@@ -131,8 +131,9 @@ export default function Leaderboard() {
         </section>
       )}
 
-      {/* Ranks 4+ */}
-      <section className="space-y-3 mt-6 px-24">
+      {/* Ranks 4+ (scrollable list so users can reach past rank 10) */}
+      <section className="mt-6 px-24">
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-3">
           {others.map((entry) => (
             <div
               key={entry.rank}
@@ -151,7 +152,8 @@ export default function Leaderboard() {
               </span>
             </div>
           ))}
-        </section>
+        </div>
+      </section>
 
       {/* Your rank at the bottom */}
       <section className="mt-6 px-16">
