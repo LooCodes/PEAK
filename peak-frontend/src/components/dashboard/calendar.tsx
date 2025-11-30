@@ -46,9 +46,40 @@ type CalendarProps = {
   workouts?: Workout[];
 };
 
+/**
+ * Turn an ISO string into a local date key "YYYY-MM-DD" in the user's timezone.
+ */
+function isoToLocalDateKey(iso: string): string {
+  const d = new Date(iso);
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1; // 0-based
+  const day = d.getDate();
+
+  const mm = month < 10 ? `0${month}` : `${month}`;
+  const dd = day < 10 ? `0${day}` : `${day}`;
+  return `${year}-${mm}-${dd}`;
+}
+
+/**
+ * Format duration in seconds into a human-friendly string without rounding:
+ * - < 60  → "XX sec"
+ * - >= 60 → "X min", "X min Y sec"
+ */
+function formatDuration(seconds: number): string {
+  if (seconds < 60) {
+    return `${seconds} sec`;
+  }
+  const mins = Math.floor(seconds / 60);
+  const remaining = seconds % 60;
+  if (remaining === 0) {
+    return `${mins} min`;
+  }
+  return `${mins} min ${remaining} sec`;
+}
+
 function Calendar({
-  workoutDates = [],
-  mealDates = [],
+  // workoutDates = [],
+  // mealDates = [],
   meals = [],
   workouts = [],
 }: CalendarProps) {
@@ -120,15 +151,36 @@ function Calendar({
     "0"
   )}-${String(todayDay).padStart(2, "0")}`;
 
+  // Derive local date keys from the actual ISO timestamps
+  const workoutDateSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const w of workouts) {
+      if (w.performedAt) {
+        set.add(isoToLocalDateKey(w.performedAt));
+      }
+    }
+    return set;
+  }, [workouts]);
+
+  const mealDateSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of meals) {
+      if (m.eatenAt) {
+        set.add(isoToLocalDateKey(m.eatenAt));
+      }
+    }
+    return set;
+  }, [meals]);
+
   // when user clicks on a day cell
   const handleDayClick = (dateKey: string, isInteractive: boolean) => {
     if (!isInteractive) return;
 
     const mealsForDay = meals.filter(
-      (m) => m.eatenAt && m.eatenAt.startsWith(dateKey)
+      (m) => m.eatenAt && isoToLocalDateKey(m.eatenAt) === dateKey
     );
     const workoutsForDay = workouts.filter(
-      (w) => w.performedAt && w.performedAt.startsWith(dateKey)
+      (w) => w.performedAt && isoToLocalDateKey(w.performedAt) === dateKey
     );
 
     setSelectedDate(dateKey);
@@ -202,8 +254,9 @@ function Calendar({
             }
 
             const dateKey = formatDate(day);
-            const hasWorkout = workoutDates.includes(dateKey);
-            const hasMeal = mealDates.includes(dateKey);
+
+            const hasWorkout = workoutDateSet.has(dateKey);
+            const hasMeal = mealDateSet.has(dateKey);
             const isToday = dateKey === todayKey;
             const isInteractive = hasWorkout || hasMeal;
 

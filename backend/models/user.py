@@ -23,3 +23,4 @@ class User(Base):
     workouts = relationship("Workout", back_populates="user", cascade="all, delete-orphan")
     user_challenges = relationship("UserChallenge", back_populates="user", cascade="all, delete-orphan")
     user_workout_exercises = relationship("UserWorkoutExercise", back_populates="user", cascade="all, delete-orphan")
+    questionnaire_answers = relationship("UserQuestionnaireAnswer", back_populates="user", cascade="all, delete-orphan")

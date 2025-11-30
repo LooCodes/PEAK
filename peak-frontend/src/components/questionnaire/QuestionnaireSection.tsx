@@ -29,13 +29,13 @@ type Question = {
         <h2 className="text-2xl font-semibold text-center">{topic}</h2>
   
         <div className="space-y-5">
-          {questions.map((q, idx) => (
+          {questions.map((q) => (
             <div
               key={q.id}
               className="rounded-2xl border border-slate-200 bg-[#1a1a1a] px-6 py-5 shadow-sm"
             >
               <p className="font-medium text-lg mb-4">
-                {idx + 1}. {q.text}
+                 {q.text}
               </p>
 
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
