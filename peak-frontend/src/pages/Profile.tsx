@@ -13,7 +13,6 @@ type WorkoutBest = {
 const Profile: React.FC = () => {
   const { user, isLoading } = useAuth() as any;
   const navigate = useNavigate();
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 pt-24">
@@ -92,16 +91,27 @@ const Profile: React.FC = () => {
               <div className="bg-[#111111] rounded-xl p-6 h-80 overflow-auto">
                 <div className="font-mono text-lg font-semibold mb-3">Personal Bests</div>
                 {bestsLoading && <div className="text-sm text-gray-400">Loading...</div>}
+
                 {!bestsLoading && bests.length === 0 && (
                   <div className="text-sm text-gray-400">No workouts recorded yet.</div>
                 )}
+
                 {!bestsLoading && bests.length > 0 && (
                   <div className="text-sm text-gray-300 space-y-2">
-                    {bests.map((best) => (
-                      <div key={best.exercise_id}>
-                        {best.exercise_name} — {best.max_weight ? `${best.max_weight} kg` : '—'} x {best.reps_at_max} reps
-                      </div>
-                    ))}
+                    {bests.map((best) => {
+                      // backend returns max_weight in lbs; convert to kg when requested
+                      const displayWeight = best.max_weight == null
+                        ? '—'
+                        : unit === 'lbs'
+                        ? `${Math.round(best.max_weight * 10) / 10} lbs`
+                        : `${Math.round((best.max_weight / 2.20462) * 10) / 10} kg`;
+
+                      return (
+                        <div key={best.exercise_id}>
+                          {best.exercise_name} — {displayWeight} x {best.reps_at_max} reps
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -171,8 +181,8 @@ const Profile: React.FC = () => {
                     {user.weight == null
                       ? '—'
                       : unit === 'kg'
-                      ? `${user.weight} kg`
-                      : `${Math.round(user.weight * 2.20462)} lbs`}
+                      ? `${Math.round((user.weight / 2.20462) * 10) / 10} kg`
+                      : `${user.weight} lbs`}
                   </div>
                 </div>
 
