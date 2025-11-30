@@ -51,7 +51,7 @@ class WorkoutSet(Base):
     workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=False)
     exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
     set_no = Column(Integer, nullable=False)
-    reps = Column(Integer, nullable=False)
+    reps = Column(Integer, nullable=True)
     weight = Column(Numeric(6, 2))           # kg
     duration_seconds = Column(Integer)       # optional
     calories = Column(Numeric(8, 2))         # optional

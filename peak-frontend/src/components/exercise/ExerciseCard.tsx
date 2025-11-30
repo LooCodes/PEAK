@@ -1,3 +1,6 @@
+// src/components/exercise/ExerciseCard.tsx
+import React from "react";
+
 type Exercise = {
   id: number;
   name: string;
@@ -15,7 +18,7 @@ type ExerciseCardProps = {
   exercise: Exercise;
   isAuthenticated: boolean;
   onCardClick: () => void;
-  onAddClick: () => void;
+  onAddClick?: () => void; // ✅ make this optional
 };
 
 const ExerciseCard = ({
@@ -26,7 +29,9 @@ const ExerciseCard = ({
 }: ExerciseCardProps) => {
   const handleAddClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onAddClick();
+    if (onAddClick) {
+      onAddClick();
+    }
   };
 
   return (
@@ -47,28 +52,16 @@ const ExerciseCard = ({
         )}
       </div>
 
-      {/* Exercise info */}
+      {/* Exercise name only (no tags) */}
       <div className="flex-1">
         <h3 className="text-lg font-semibold mb-1">{exercise.name}</h3>
-        <div className="flex gap-2 flex-wrap">
-          {exercise.body_part && (
-            <span className="text-xs px-2 py-1 bg-blue-600/20 text-blue-400 rounded-full">
-              {exercise.body_part}
-            </span>
-          )}
-          {exercise.equipment_type && (
-            <span className="text-xs px-2 py-1 bg-purple-600/20 text-purple-400 rounded-full">
-              {exercise.equipment_type}
-            </span>
-          )}
-        </div>
       </div>
 
-      {/* Add button */}
-      {isAuthenticated && (
+      {/* Add button – only in browse mode when onAddClick is provided */}
+      {isAuthenticated && onAddClick && (
         <button
           onClick={handleAddClick}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition flex-shrink-0"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition flex-shrink-0 text-sm font-medium"
         >
           Add
         </button>
