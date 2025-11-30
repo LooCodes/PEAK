@@ -1,14 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from sqlalchemy import func
-from typing import List
+# backend/app/routers/workouts.py
+from datetime import datetime, timezone
 
-from db.session import SessionLocal
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from db.database import SessionLocal
 from models.exercise import Exercise, Workout, WorkoutSet
 from models.user import User
-from schemas.workouts import WorkoutBestItem
+from schemas.workouts import WorkoutCreate, WorkoutCreateResponse
 from auth import get_current_user
-
 
 router = APIRouter(prefix="/api/workouts", tags=["workouts"])
 
@@ -21,56 +21,116 @@ def get_db():
         db.close()
 
 
-@router.get("/bests", response_model=List[WorkoutBestItem])
-def get_workout_bests(
+@router.post("/", response_model=WorkoutCreateResponse)
+def create_workout(
+    payload: WorkoutCreate,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
 ):
     """
-    Get the user's personal best weight for each exercise.
-    Returns exercises sorted by max weight descending.
+    Create a workout session with one or more exercises + sets.
+
+    The payload looks like:
+    {
+      "performed_at": "...optional...",
+      "notes": "...optional...",
+      "exercises": [
+        {
+          "name": "Barbell Squat",
+          "sets": [
+            { "set_no": 1, "reps": 8, "weight": 40, "duration_seconds": 60 },
+            ...
+          ]
+        },
+        ...
+      ]
+    }
+
+    For each exercise name, we either:
+      - find an existing Exercise by name (case-insensitive), or
+      - create a new Exercise row with minimal info.
+    Then we create WorkoutSet rows linked to that Exercise.
     """
-    # Subquery: find max weight per exercise for this user
-    max_weight_per_exercise = (
-        db.query(
-            WorkoutSet.exercise_id,
-            func.max(WorkoutSet.weight).label("max_weight")
+    if not payload.exercises:
+        raise HTTPException(
+            status_code=400,
+            detail="Workout must contain at least one exercise",
         )
-        .join(Workout)
-        .filter(Workout.user_id == current_user.id)
-        .group_by(WorkoutSet.exercise_id)
-        .subquery()
-    )
 
-    # Main query: get exercise details and reps at max weight
-    results = (
-        db.query(
-            Exercise.id.label("exercise_id"),
-            Exercise.name.label("exercise_name"),
-            max_weight_per_exercise.c.max_weight,
-            WorkoutSet.reps.label("reps_at_max")
-        )
-        .join(max_weight_per_exercise, Exercise.id == max_weight_per_exercise.c.exercise_id)
-        .outerjoin(
-            WorkoutSet,
-            (WorkoutSet.exercise_id == Exercise.id) & 
-            (WorkoutSet.weight == max_weight_per_exercise.c.max_weight)
-        )
-        .join(Workout, WorkoutSet.workout_id == Workout.id)
-        .filter(Workout.user_id == current_user.id)
-        .order_by(max_weight_per_exercise.c.max_weight.desc())
-        .all()
-    )
+    # Filter out exercises with no name or no sets
+    cleaned_exercises = []
+    for ex in payload.exercises:
+        name = ex.name.strip()
+        cleaned_sets = [
+            s
+            for s in ex.sets
+            if (s.reps is not None or s.weight is not None or s.duration_seconds is not None)
+        ]
+        if name and cleaned_sets:
+            cleaned_exercises.append((name, cleaned_sets))
 
-    bests = []
-    for exercise_id, exercise_name, max_weight, reps in results:
-        bests.append(
-            WorkoutBestItem(
-                exercise_id=exercise_id,
-                exercise_name=exercise_name,
-                max_weight=float(max_weight) if max_weight else None,
-                reps_at_max=reps or 0,
+    if not cleaned_exercises:
+        raise HTTPException(
+            status_code=400,
+            detail="Workout has no valid exercises or sets",
+        )
+
+    # Prepare / find Exercise rows
+    exercise_ids: list[int] = []
+    for name, _sets in cleaned_exercises:
+        # Try to find an existing exercise by name (case-insensitive)
+        existing = (
+            db.query(Exercise)
+            .filter(Exercise.name.ilike(name))
+            .first()
+        )
+
+        if existing:
+            ex_row = existing
+        else:
+            # Create a minimal custom exercise row
+            ex_row = Exercise(
+                name=name,
+                type="strength",          # default
+                muscle_group="Unknown",   # default
+                body_part=None,
+                equipment_type=None,
+                thumbnail_url=None,
+                gif_url=None,
+                instructions=None,
+                external_id=None,        # user-created, no external_id
             )
-        )
+            db.add(ex_row)
+            db.flush()  # assign ex_row.id
 
-    return bests
+        exercise_ids.append(ex_row.id)
+
+    # Now create the Workout row itself
+    performed_at = payload.performed_at or datetime.now(timezone.utc)
+    workout = Workout(
+        user_id=current_user.id,
+        performed_at=performed_at,
+        notes=payload.notes,
+    )
+    db.add(workout)
+    db.flush()  # get workout.id
+
+    # Create WorkoutSet rows
+    for (name, sets), exercise_id in zip(cleaned_exercises, exercise_ids):
+        for s in sets:
+            ws = WorkoutSet(
+                workout_id=workout.id,
+                exercise_id=exercise_id,
+                set_no=s.set_no,
+                reps=s.reps,
+                weight=s.weight,
+                duration_seconds=s.duration_seconds,
+            )
+            db.add(ws)
+
+    db.commit()
+    db.refresh(workout)
+
+    return WorkoutCreateResponse(status="ok", workout_id=workout.id)
+    # relationship to per-question answers
+    questionnaire_answers = relationship("UserQuestionnaireAnswer", back_populates="user", cascade="all, delete-orphan")

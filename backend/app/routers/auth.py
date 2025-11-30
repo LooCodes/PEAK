@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from db.session import SessionLocal
+from db.database import SessionLocal
 from models.user import User
 from models.leaderboard import LeaderboardEntry
 from schemas.auth import UserRegister, UserLogin, Token, UserResponse
@@ -66,30 +66,42 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login(credentials: UserLogin, db: Session = Depends(get_db)):
-    # Find user by username or email
-    user = db.query(User).filter(
-        (User.username == credentials.username) | (User.email == credentials.username)
-    ).first()
+    try:
+        print(f"DEBUG: Login attempt for username: {credentials.username}")
+        # Find user by username or email
+        user = db.query(User).filter(
+            (User.username == credentials.username) | (User.email == credentials.username)
+        ).first()
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        print(f"DEBUG: User found: {user}")
 
-    # Verify password
-    if not verify_password(credentials.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
-    # Create access token
-    access_token = create_access_token(data={"sub": str(user.id)})
+        # Verify password
+        print(f"DEBUG: Verifying password")
+        if not verify_password(credentials.password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+        # Create access token
+        print(f"DEBUG: Creating token")
+        access_token = create_access_token(data={"sub": str(user.id)})
+
+        print(f"DEBUG: Returning token")
+        return {"access_token": access_token, "token_type": "bearer"}
+    except Exception as e:
+        print(f"ERROR in login: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 
 @router.get("/me", response_model=UserResponse)

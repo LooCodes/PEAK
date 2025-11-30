@@ -10,8 +10,8 @@ class UserRegister(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     age: Optional[int] = Field(None, ge=13, le=120)
-    height: Optional[float] = Field(None, ge=0)
-    weight: Optional[float] = Field(None, ge=0)
+    height: Optional[int] = Field(None, ge=0)
+    weight: Optional[int] = Field(None, ge=0)
 
 
 class UserLogin(BaseModel):
@@ -31,12 +31,11 @@ class UserResponse(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     age: Optional[int] = None
-    height: Optional[float] = None
-    weight: Optional[float] = None
+    height: Optional[int] = None
+    weight: Optional[int] = None
     streak: int = 0
     total_xp: Optional[int] = 0
     weekly_xp: Optional[int] = 0
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
