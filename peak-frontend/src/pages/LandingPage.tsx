@@ -51,14 +51,6 @@ const LandingPage = () => {
                     </div>
                 </section>
 
-                <section className="mt-24">
-                    <div className="grid gap-6 md:grid-cols-3">
-                        {[1, 2, 3].map((box) => (
-                            <div key={box} className="border border-gray-400 bg-[#2a2a2a] rounded-xl aspect-[4/3]"></div>
-                        ))}
-                    </div>
-                </section>
-
                 <section className="mt-20 text-center">
                     <h3 className="text-2xl md:text-3xl mb-3">
                         Ready to work towards your PEAK?
