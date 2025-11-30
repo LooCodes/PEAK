@@ -10,6 +10,8 @@ class User(Base):
     username = Column(String, unique=True, nullable=False, index=True)
     email = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
+    first_name = Column(String)
+    last_name = Column(String)
     age = Column(Integer)
     weight = Column(Integer)  # store in kg
     height = Column(Integer)  # store in cm
@@ -22,3 +24,5 @@ class User(Base):
     meals = relationship("Meal", back_populates="user", cascade="all, delete-orphan")
     workouts = relationship("Workout", back_populates="user", cascade="all, delete-orphan")
     user_challenges = relationship("UserChallenge", back_populates="user", cascade="all, delete-orphan")
+    # relationship to per-question answers
+    questionnaire_answers = relationship("UserQuestionnaireAnswer", back_populates="user", cascade="all, delete-orphan")

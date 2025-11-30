@@ -28,10 +28,14 @@ class UserResponse(BaseModel):
     id: int
     username: str
     email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     age: Optional[int] = None
     height: Optional[float] = None
     weight: Optional[float] = None
     streak: int = 0
+    total_xp: Optional[int] = 0
+    weekly_xp: Optional[int] = 0
     created_at: datetime
 
     class Config:
