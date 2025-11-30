@@ -7,7 +7,7 @@ import traceback
 
 from db import Base, engine
 from models import *   # noqa: F401,F403 (loads User, Meal, Workout, etc.)
-from .routers import dashboard, auth, nutrition, leaderboard, challenges, exercises, workouts, workout_bests, questionnaire
+from .routers import dashboard, auth, nutrition, leaderboard, challenges, exercises, workouts, meal_logger, workout_bests, questionnaire
 
 load_dotenv()
 
@@ -49,7 +49,7 @@ app.include_router(auth.router)
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 
 # Nutrition router
-app.include_router(nutrition.router, prefix="/api")
+app.include_router(nutrition.router, prefix = "/api")
 
 # Leaderboard router
 app.include_router(leaderboard.router)
@@ -63,6 +63,8 @@ app.include_router(exercises.router)
 # Workout router
 app.include_router(workouts.router)
 
+# Meal Logger router
+app.include_router(meal_logger.router, prefix = "/api")
 # Workout Bests router
 app.include_router(workout_bests.router)
 

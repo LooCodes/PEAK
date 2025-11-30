@@ -2,31 +2,32 @@ import { useEffect, useState } from "react";
 import api from "../../api/axios";
 
 type FoodItem = {
-  code: string;
+  id: number;
+  openfood_code: string | null;
   name: string;
-  calories_per_100g: number | null;
-  protein_per_100g: number | null;
-  carbs_per_100g: number | null;
-  fats_per_100g: number | null;
+  calories_per_100g: number;
+  protein_per_100g: number;
+  carbs_per_100g: number;
+  fats_per_100g: number;
   allergens: string;
 };
 
 type NutritionInformationProps = {
-  code: string;
+  openfood_code: string | null;
   onClose: () => void;
 };
 
-const fmt = (n: number | null | undefined) =>
-  n !== null && n !== undefined ? n.toFixed(1) : "0.0";
+// const fmt = (n: number | null | undefined) =>
+//   n !== null && n !== undefined ? n.toFixed(1) : "0.0";
 
-const NutritionInformation = ({ code, onClose }: NutritionInformationProps) => {
+const NutritionInformation = ({ openfood_code, onClose }: NutritionInformationProps) => {
   const [data, setData] = useState<FoodItem | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDetails = async () => {
       try {
-        const res = await api.get<FoodItem>(`/nutrition/search/${code}`);
+        const res = await api.get<FoodItem>(`/nutrition/search/${openfood_code}`);
         setData(res.data);
       } catch (err) {
         console.error("Error loading food details:", err);
@@ -36,7 +37,7 @@ const NutritionInformation = ({ code, onClose }: NutritionInformationProps) => {
     };
 
     fetchDetails();
-  }, [code]);
+  }, [openfood_code]);
 
   if (loading) {
     return (
@@ -60,7 +61,7 @@ const NutritionInformation = ({ code, onClose }: NutritionInformationProps) => {
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-2xl hover:text-gray-300"
+          className="absolute right-4 top-4 text-2xl"
         >
           ×
         </button>
@@ -70,10 +71,10 @@ const NutritionInformation = ({ code, onClose }: NutritionInformationProps) => {
 
         {/* Calories + Macros */}
         <div className="mb-6 text-lg">
-          <p><strong>Calories (per 100g):</strong> {fmt(data.calories_per_100g) ?? "N/A"}</p>
-          <p><strong>Protein (per 100g):</strong> {fmt(data.protein_per_100g) ?? "N/A"} g</p>
-          <p><strong>Carbs (per 100g):</strong> {fmt(data.carbs_per_100g) ?? "N/A"} g</p>
-          <p><strong>Fats (per 100g):</strong> {fmt(data.fats_per_100g) ?? "N/A"} g</p>
+          <p><strong>Calories (per 100g):</strong> {data.calories_per_100g !== 0.0 ? data.calories_per_100g : "N/A"}</p>
+          <p><strong>Protein (per 100g):</strong> {data.protein_per_100g !== 0.0 ? data.protein_per_100g : "N/A"} g</p>
+          <p><strong>Carbs (per 100g):</strong> {data.carbs_per_100g !== 0.0 ? data.carbs_per_100g : "N/A"} g</p>
+          <p><strong>Fats (per 100g):</strong> {data.fats_per_100g !== 0.0 ? data.fats_per_100g : "N/A"} g</p>
         </div>
 
         {/* Allergens */}
@@ -81,7 +82,7 @@ const NutritionInformation = ({ code, onClose }: NutritionInformationProps) => {
         {data.allergens ? (
           <ul className="list-disc pl-5">
             {data.allergens.split(",").map((a, i) => (
-              <li key={i}>{a.replace(/^en:/, "").trim()}</li>
+              <li key={i}>{a.replace(/^en:/, "").replace(/-/g, " ").trim()}</li>
             ))}
           </ul>
         ) : (

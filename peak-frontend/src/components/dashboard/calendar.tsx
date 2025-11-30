@@ -345,9 +345,9 @@ function Calendar({
                               {s.exercise.name}
                             </span>{" "}
                             — set {s.setNo}: {s.reps} reps
-                            {s.weight !== null && <> @ {s.weight} kg</>}
-                            {s.durationSeconds !== null && (
-                              <> • {formatDuration(s.durationSeconds)}</>
+                            {s.weight !== null && <> @ {s.weight} lbs</>}
+                            {s.durationSeconds && (
+                              <> • {Math.round(s.durationSeconds / 60)} min</>
                             )}
                           </li>
                         ))}

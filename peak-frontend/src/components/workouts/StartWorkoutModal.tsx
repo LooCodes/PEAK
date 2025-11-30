@@ -316,7 +316,7 @@ const StartWorkoutModal = ({
                                 )
                               }
                               className="w-full rounded-lg bg-[#111] border border-[#333] px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500"
-                              placeholder="kg"
+                              placeholder="lbs"
                             />
                           </td>
                           <td className="py-2 pr-4">
