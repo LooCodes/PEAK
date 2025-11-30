@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import ProgressBar from "../components/questionnaire/ProgressBar";
 import QuestionnaireSection from "../components/questionnaire/QuestionnaireSection";
-import NextButton from "../components/questionnaire/NextButton";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 
@@ -10,6 +9,8 @@ export default function Questionnaire() {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [questions, setQuestions] = useState<Array<{ id: number; text: string }>>([]);
   const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(0);
+  const PAGE_SIZE = 5;
 
   useEffect(() => {
     let mounted = true;
@@ -58,12 +59,47 @@ export default function Questionnaire() {
       />
       <QuestionnaireSection
         topic="Training Preferences"
-        questions={questions}
+        questions={questions.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)}
         answers={answers}
         onAnswerChange={handleAnswerChange}
       />
 
-      <NextButton isLastStep={true} onClick={handleSubmit} />
+      <div className="flex items-center justify-center gap-4">
+        <button
+          className={`px-3 py-2 rounded ${currentPage === 0 ? 'opacity-50 cursor-not-allowed' : 'bg-[#111111] hover:bg-[#222]'} text-sm`}
+          onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+          disabled={currentPage === 0}
+        >
+          Previous
+        </button>
+
+        {/* page numbers */}
+        <div className="flex items-center gap-2">
+          {Array.from({ length: Math.max(1, Math.ceil(questions.length / PAGE_SIZE)) }).map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentPage(idx)}
+              className={`px-3 py-1 rounded ${idx === currentPage ? 'bg-blue-600 text-white' : 'bg-[#111111] text-sm'}`}
+            >
+              {idx + 1}
+            </button>
+          ))}
+        </div>
+
+        <button
+          className={`px-4 py-2 rounded bg-blue-500 hover:bg-blue-600 text-sm`}
+          onClick={() => {
+            const totalPages = Math.max(1, Math.ceil(questions.length / PAGE_SIZE));
+            if (currentPage >= totalPages - 1) {
+              handleSubmit();
+            } else {
+              setCurrentPage((p) => Math.min(totalPages - 1, p + 1));
+            }
+          }}
+        >
+          {currentPage >= Math.max(1, Math.ceil(questions.length / PAGE_SIZE)) - 1 ? 'Complete' : 'Next'}
+        </button>
+      </div>
     </div>
   );
 }
