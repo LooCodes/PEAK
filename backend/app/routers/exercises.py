@@ -1,7 +1,8 @@
+# backend/app/routers/exercises.py
 from fastapi import APIRouter, Depends, HTTPException, Query
+import json
 from sqlalchemy.orm import Session
 from typing import Optional, List
-import json
 import requests
 from datetime import datetime
 import os
@@ -20,20 +21,12 @@ from auth import get_current_user
 
 router = APIRouter(prefix="/api/exercises", tags=["exercises"])
 
-# ExerciseDB API configuration
+# --------- ExerciseDB API config ---------
 EXERCISEDB_API_KEY = os.getenv("EXERCISEDB_API_KEY")
-EXERCISEDB_API_HOST = os.getenv("EXERCISEDB_API_HOST", "exercisedb.p.rapidapi.com")
-EXERCISEDB_BASE_URL = f"https://{EXERCISEDB_API_HOST}"
-
-# Body part mapping from our UI to ExerciseDB API
-BODY_PART_MAP = {
-    "Chest": "chest",
-    "Back": "back",
-    "Legs": ["upper legs", "lower legs"],
-    "Arms": ["upper arms", "lower arms"],
-    "Shoulders": "shoulders",
-    "Cardio": "cardio",
-}
+EXERCISEDB_API_HOST = os.getenv(
+    "EXERCISEDB_API_HOST", "exercisedb-api1.p.rapidapi.com"
+)
+EXERCISEDB_BASE_URL = f"https://{EXERCISEDB_API_HOST}/api/v1"
 
 
 def get_db():
@@ -44,114 +37,190 @@ def get_db():
         db.close()
 
 
-def fetch_exercisedb_exercises(body_part: Optional[str] = None, limit: int = 50):
-    """Fetch exercises from ExerciseDB API"""
-    if not EXERCISEDB_API_KEY:
-        return None
+# ---------- Helpers for ExerciseDB ----------
 
-    headers = {
-        "X-RapidAPI-Key": EXERCISEDB_API_KEY,
-        "X-RapidAPI-Host": EXERCISEDB_API_HOST
+
+def _get_headers() -> dict:
+    return {
+        "X-RapidAPI-Key": EXERCISEDB_API_KEY or "",
+        "X-RapidAPI-Host": EXERCISEDB_API_HOST,
     }
 
-    try:
-        if body_part:
-            # Map our body part to ExerciseDB body parts
-            api_body_parts = BODY_PART_MAP.get(body_part, body_part.lower())
-            if isinstance(api_body_parts, list):
-                # For body parts like Legs/Arms that map to multiple API body parts
-                all_exercises = []
-                for api_bp in api_body_parts:
-                    url = f"{EXERCISEDB_BASE_URL}/exercises/bodyPart/{api_bp}"
-                    response = requests.get(url, headers=headers, params={"limit": limit // len(api_body_parts)})
-                    if response.status_code == 200:
-                        all_exercises.extend(response.json())
-                return all_exercises
-            else:
-                url = f"{EXERCISEDB_BASE_URL}/exercises/bodyPart/{api_body_parts}"
-                response = requests.get(url, headers=headers, params={"limit": limit})
-        else:
-            url = f"{EXERCISEDB_BASE_URL}/exercises"
-            response = requests.get(url, headers=headers, params={"limit": limit})
 
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print(f"ExerciseDB API Error: {response.status_code} - {response.text}")
+def fetch_exercisedb_search(query: str, limit: int = 50):
+    """
+    Search exercises via ExerciseDB v1:
+      GET /exercises/search?search=...&limit=...
+
+    We do *no* filtering here. Just return the raw list from the API.
+    """
+    if not EXERCISEDB_API_KEY:
+        print("No EXERCISEDB_API_KEY set, skipping ExerciseDB API call")
+        return None
+
+    headers = _get_headers()
+    url = f"{EXERCISEDB_BASE_URL}/exercises/search"
+    params = {"search": query, "limit": limit}
+
+    try:
+        resp = requests.get(url, headers=headers, params=params)
+        print("SEARCH status:", resp.status_code, "for query:", query)
+
+        if resp.status_code != 200:
+            print("ExerciseDB search error:", resp.status_code, "-", resp.text[:300])
             return None
+
+        data = resp.json()
+        if not isinstance(data, dict) or "data" not in data:
+            print("Unexpected search response format:", data)
+            return None
+
+        results = data["data"]  # list[dict]
+        print(f"SEARCH returned {len(results)} exercises")
+        return results
+
     except Exception as e:
-        print(f"Error fetching from ExerciseDB: {e}")
+        print(f"Error fetching from ExerciseDB search: {e}")
+        return None
+
+
+def fetch_exercisedb_detail(exercise_id: str):
+    """
+    Fetch full details for a single exercise:
+      GET /exercises/{exerciseId}
+
+    Includes overview, instructions, etc.
+    """
+    if not EXERCISEDB_API_KEY:
+        print("No EXERCISEDB_API_KEY set, skipping ExerciseDB detail call")
+        return None
+
+    headers = _get_headers()
+    url = f"{EXERCISEDB_BASE_URL}/exercises/{exercise_id}"
+
+    try:
+        resp = requests.get(url, headers=headers)
+        print("DETAIL status:", resp.status_code, "for", exercise_id)
+
+        if resp.status_code != 200:
+            print("Detail API error:", resp.status_code, "-", resp.text[:300])
+            return None
+
+        data = resp.json()
+        if isinstance(data, dict) and "data" in data:
+            return data["data"]
+        return None
+
+    except Exception as e:
+        print(f"Error fetching detail for {exercise_id}: {e}")
         return None
 
 
 def map_exercisedb_to_exercise(api_exercise: dict, index: int) -> dict:
-    """Map ExerciseDB API response to our Exercise format"""
-    # NOTE: ExerciseDB RapidAPI free tier doesn't include access to the image endpoint
-    # Using placeholder images based on exercise name/ID
-    # To get real GIFs, you need a paid ExerciseDB subscription or use an alternative like wger
-    exercise_id = api_exercise.get("id", "")
-    exercise_name = api_exercise.get("name", "exercise")
+    """
+    Map ExerciseDB v1 object (search or detail) to our internal Exercise format.
+    """
+    exercise_id = api_exercise.get("exerciseId", "")
+    name = (api_exercise.get("name") or "").strip()
+    image_url = api_exercise.get("imageUrl")
 
-    # Map body part for color-coded placeholders
-    api_body_part = api_exercise.get("bodyPart", "")
+    # Body part
+    body_parts = api_exercise.get("bodyParts") or []
+    primary_body_raw = body_parts[0] if body_parts else None
 
-    # Use placeholder.co with exercise name and body part color coding
-    # This provides a cleaner, more professional look than random shapes
-    color_map = {
-        "chest": "3b82f6",      # blue
-        "back": "10b981",        # green
-        "waist": "8b5cf6",       # purple
-        "upper legs": "f59e0b",  # amber
-        "lower legs": "f59e0b",  # amber
-        "upper arms": "ec4899",  # pink
-        "lower arms": "ec4899",  # pink
-        "shoulders": "06b6d4",   # cyan
-        "cardio": "ef4444",      # red
-    }
-    color = color_map.get(api_body_part, "6b7280")  # gray as default
-
-    # Create a simple colored placeholder with exercise name initial
-    # Using via.placeholder.com for better-looking placeholders
-    gif_url = f"https://via.placeholder.com/300x300/{color}/ffffff?text={exercise_name[:20].replace(' ', '+')}"
-
-    # Map body part to our categories
-    if api_body_part in ["upper legs", "lower legs"]:
-        body_part = "Legs"
-    elif api_body_part in ["upper arms", "lower arms"]:
-        body_part = "Arms"
+    if primary_body_raw:
+        body_part = (
+            primary_body_raw.title()
+            .replace("_", " ")
+            .replace("-", " ")
+        )
     else:
-        body_part = api_body_part.capitalize()
+        body_part = None
 
-    # Map equipment to our categories
-    equipment = api_exercise.get("equipment", "")
-    if equipment in ["body weight", "assisted"]:
-        equipment_type = "At Home"
-    elif equipment in ["dumbbell", "barbell", "kettlebell", "ez barbell"]:
+    # Muscle group
+    target_muscles = api_exercise.get("targetMuscles") or []
+    muscle_group = target_muscles[0] if target_muscles else (primary_body_raw or "")
+
+    # Equipment bucketing
+    equipments = api_exercise.get("equipments") or []
+    equipments_lower = " ".join(e.lower() for e in equipments)
+
+    if any(w in equipments_lower for w in ["dumbbell", "barbell", "kettlebell", "ez barbell"]):
         equipment_type = "Free Weights"
-    elif equipment in ["cable", "leverage machine", "sled machine", "smith machine"]:
+    elif any(w in equipments_lower for w in ["machine", "cable", "sled", "smith"]):
         equipment_type = "Machine"
-    elif equipment == "band":
+    elif "band" in equipments_lower:
         equipment_type = "Bands"
     else:
         equipment_type = "At Home"
 
+    exercise_type = (api_exercise.get("exerciseType") or "strength").title()
+    instructions = api_exercise.get("instructions") or []
+
     return {
-        "id": index + 1,  # Use index as internal ID
-        "name": api_exercise.get("name", "").title(),
-        "type": api_exercise.get("category", "strength"),
-        "muscle_group": api_exercise.get("target", ""),
+        "id": index + 1,  # local index for this response
+        "name": name,
+        "type": exercise_type,
+        "muscle_group": muscle_group,
         "body_part": body_part,
         "equipment_type": equipment_type,
-        "thumbnail_url": gif_url,
-        "gif_url": gif_url,
-        "instructions": api_exercise.get("instructions", []),
-        "external_id": exercise_id
+        "thumbnail_url": image_url,
+        "gif_url": image_url,
+        "instructions": instructions,
+        "external_id": exercise_id,
     }
 
+def get_or_create_exercise_from_external(
+    db: Session,
+    external_id: str,
+) -> Exercise:
+    """
+    Given an ExerciseDB exerciseId (external_id), either:
+    - return existing Exercise row, or
+    - fetch detail from ExerciseDB, insert into `exercises`, and return it.
+    """
 
-# Mock data for development
-# TODO: Replace with ExerciseDB API integration
-# To use real exercise GIFs, sign up for RapidAPI ExerciseDB and add your key to .env
+    # 1) Try existing record by external_id
+    existing = db.query(Exercise).filter(Exercise.external_id == external_id).first()
+    if existing:
+        return existing
+
+    # 2) Fetch from ExerciseDB detail endpoint
+    detail = fetch_exercisedb_detail(external_id)
+    if not detail:
+        raise HTTPException(
+            status_code=404,
+            detail="Could not fetch exercise details from ExerciseDB.",
+        )
+
+    # 3) Map API object to our internal shape
+    mapped = map_exercisedb_to_exercise(detail, index=0)
+
+    # 4) Prepare instructions as JSON text (your column is Text)
+    instructions_list = mapped.get("instructions") or []
+    instructions_text = json.dumps(instructions_list)
+
+    # 5) Create Exercise row
+    ex = Exercise(
+        name=mapped["name"],
+        type=mapped["type"],
+        muscle_group=mapped["muscle_group"] or "Unknown",
+        body_part=mapped.get("body_part"),
+        equipment_type=mapped.get("equipment_type"),
+        thumbnail_url=mapped.get("thumbnail_url"),
+        gif_url=mapped.get("gif_url"),
+        instructions=instructions_text,
+        external_id=mapped.get("external_id") or external_id,
+    )
+
+    db.add(ex)
+    db.commit()
+    db.refresh(ex)
+
+    return ex
+
+# ---------- Mock data (fallback) ----------
+
 MOCK_EXERCISES = [
     {
         "id": 1,
@@ -165,9 +234,9 @@ MOCK_EXERCISES = [
         "instructions": [
             "Set an adjustable bench to a 30-45 degree incline.",
             "Lie back holding dumbbells above your chest with arms extended.",
-            "Lower the dumbbells to chest level, then press back up while keeping control."
+            "Lower the dumbbells to chest level, then press back up while keeping control.",
         ],
-        "external_id": "0001"
+        "external_id": "0001",
     },
     {
         "id": 2,
@@ -182,9 +251,9 @@ MOCK_EXERCISES = [
             "Position the barbell on your upper back/traps.",
             "Stand with feet shoulder-width apart.",
             "Lower your body by bending your knees and hips.",
-            "Push through your heels to return to starting position."
+            "Push through your heels to return to starting position.",
         ],
-        "external_id": "0002"
+        "external_id": "0002",
     },
     {
         "id": 3,
@@ -198,9 +267,9 @@ MOCK_EXERCISES = [
         "instructions": [
             "Hang from a pull-up bar with palms facing away.",
             "Pull your body up until your chin is above the bar.",
-            "Lower yourself back down with control."
+            "Lower yourself back down with control.",
         ],
-        "external_id": "0003"
+        "external_id": "0003",
     },
     {
         "id": 4,
@@ -214,9 +283,9 @@ MOCK_EXERCISES = [
         "instructions": [
             "Stand with dumbbells at your sides, palms facing forward.",
             "Curl the weights up towards your shoulders.",
-            "Lower the weights back down with control."
+            "Lower the weights back down with control.",
         ],
-        "external_id": "0004"
+        "external_id": "0004",
     },
     {
         "id": 5,
@@ -231,9 +300,9 @@ MOCK_EXERCISES = [
             "Sit on the machine with back against the pad.",
             "Grip the handles at shoulder height.",
             "Press the handles upward until arms are extended.",
-            "Lower back to starting position with control."
+            "Lower back to starting position with control.",
         ],
-        "external_id": "0005"
+        "external_id": "0005",
     },
     {
         "id": 6,
@@ -248,9 +317,9 @@ MOCK_EXERCISES = [
             "Start with a 5-minute warm-up walk.",
             "Gradually increase your pace to a comfortable running speed.",
             "Maintain good posture with shoulders relaxed.",
-            "Cool down with a 5-minute walk."
+            "Cool down with a 5-minute walk.",
         ],
-        "external_id": "0006"
+        "external_id": "0006",
     },
     {
         "id": 7,
@@ -264,9 +333,9 @@ MOCK_EXERCISES = [
         "instructions": [
             "Start in a plank position with hands shoulder-width apart.",
             "Lower your body until chest nearly touches the floor.",
-            "Push back up to starting position."
+            "Push back up to starting position.",
         ],
-        "external_id": "0007"
+        "external_id": "0007",
     },
     {
         "id": 8,
@@ -280,9 +349,9 @@ MOCK_EXERCISES = [
         "instructions": [
             "Sit at the lat pulldown machine and grip the bar wider than shoulder-width.",
             "Pull the bar down to your upper chest.",
-            "Slowly return the bar to starting position."
+            "Slowly return the bar to starting position.",
         ],
-        "external_id": "0008"
+        "external_id": "0008",
     },
     {
         "id": 9,
@@ -296,9 +365,9 @@ MOCK_EXERCISES = [
         "instructions": [
             "Stand on resistance band with feet shoulder-width apart.",
             "Hold the other end of the band at shoulder level.",
-            "Perform squats while maintaining tension in the band."
+            "Perform squats while maintaining tension in the band.",
         ],
-        "external_id": "0009"
+        "external_id": "0009",
     },
     {
         "id": 10,
@@ -312,77 +381,154 @@ MOCK_EXERCISES = [
         "instructions": [
             "Place hands on a bench or chair behind you.",
             "Lower your body by bending your elbows.",
-            "Push back up to starting position."
+            "Push back up to starting position.",
         ],
-        "external_id": "0010"
-    }
+        "external_id": "0010",
+    },
 ]
+
+
+# ---------- Routes ----------
 
 
 @router.get("/", response_model=ExerciseListResponse)
 def get_exercises(
-    body_part: Optional[str] = Query(None, description="Filter by body part (e.g., Chest, Back, Legs, Arms, Shoulders, Cardio)"),
-    equipment_type: Optional[str] = Query(None, description="Filter by equipment type (e.g., At Home, Free Weights, Machine, Bands)"),
+    query: Optional[str] = Query(
+        None,
+        description="Search term for exercises (e.g., 'bench press', 'squat')",
+    ),
     db: Session = Depends(get_db),
 ):
     """
-    Get list of exercises with optional filters.
-    Uses ExerciseDB API for real exercise data with GIFs.
+    Get list of exercises using only an optional search term.
+
+    - If query is provided: search by that term.
+    - Else: generic 'exercise' search.
+
+    We only fall back to MOCK_EXERCISES if the API call failed (returned None),
+    not when it just returned an empty list.
     """
-    # Try to fetch from ExerciseDB API first
-    api_exercises = fetch_exercisedb_exercises(body_part=body_part, limit=100)
+    search_term = query if query else "exercise"
 
-    if api_exercises:
-        # Map API exercises to our format
-        mapped_exercises = [map_exercisedb_to_exercise(ex, idx) for idx, ex in enumerate(api_exercises)]
+    api_exercises = fetch_exercisedb_search(search_term, limit=80)
 
-        # Apply equipment filter if provided
-        if equipment_type:
-            mapped_exercises = [e for e in mapped_exercises if e.get("equipment_type", "").lower() == equipment_type.lower()]
-
+    if api_exercises is not None:
+        mapped_exercises = [
+            map_exercisedb_to_exercise(ex, idx)
+            for idx, ex in enumerate(api_exercises)
+        ]
     else:
-        # Fallback to mock data if API fails
         print("Falling back to mock data")
-        filtered_exercises = MOCK_EXERCISES
+        mapped_exercises = MOCK_EXERCISES
 
-        if body_part:
-            filtered_exercises = [e for e in filtered_exercises if e.get("body_part", "").lower() == body_part.lower()]
-
-        if equipment_type:
-            filtered_exercises = [e for e in filtered_exercises if e.get("equipment_type", "").lower() == equipment_type.lower()]
-
-        mapped_exercises = filtered_exercises
-
-    # Convert to response models
-    exercise_responses = []
+    exercise_responses: List[ExerciseResponse] = []
     for ex in mapped_exercises:
-        exercise_responses.append(ExerciseResponse(
-            id=ex["id"],
-            name=ex["name"],
-            type=ex["type"],
-            muscle_group=ex["muscle_group"],
-            body_part=ex.get("body_part"),
-            equipment_type=ex.get("equipment_type"),
-            thumbnail_url=ex.get("thumbnail_url"),
-            gif_url=ex.get("gif_url"),
-            instructions=ex.get("instructions"),
-            external_id=ex.get("external_id"),
-            created_at=datetime.now()
-        ))
+        exercise_responses.append(
+            ExerciseResponse(
+                id=ex["id"],
+                name=ex["name"],
+                type=ex["type"],
+                muscle_group=ex["muscle_group"],
+                body_part=ex.get("body_part"),
+                equipment_type=ex.get("equipment_type"),
+                thumbnail_url=ex.get("thumbnail_url"),
+                gif_url=ex.get("gif_url"),
+                instructions=ex.get("instructions", []),
+                external_id=ex.get("external_id"),
+                created_at=datetime.now(),
+            )
+        )
 
     return ExerciseListResponse(exercises=exercise_responses)
 
 
+@router.get("/saved", response_model=ExerciseListResponse)
+def get_saved_exercises(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get all exercises that the current user has saved (i.e., added to their workouts).
+    This uses the `user_workout_exercises` table joined with `exercises`.
+    """
+    # Join UserWorkoutExercise -> Exercise
+    saved_exercises = (
+        db.query(Exercise)
+        .join(
+            UserWorkoutExercise,
+            UserWorkoutExercise.exercise_id == Exercise.id,
+        )
+        .filter(UserWorkoutExercise.user_id == current_user.id)
+        .order_by(Exercise.name.asc())
+        .all()
+    )
+
+    exercise_responses: List[ExerciseResponse] = []
+
+    for ex in saved_exercises:
+        # instructions are stored as JSON text in the DB
+        try:
+            instr = json.loads(ex.instructions) if ex.instructions else []
+        except Exception:
+            instr = []
+
+        exercise_responses.append(
+            ExerciseResponse(
+                id=ex.id,
+                name=ex.name,
+                type=ex.type,
+                muscle_group=ex.muscle_group,
+                body_part=ex.body_part,
+                equipment_type=ex.equipment_type,
+                thumbnail_url=ex.thumbnail_url,
+                gif_url=ex.gif_url,
+                instructions=instr,
+                external_id=ex.external_id,
+                created_at=ex.created_at,
+            )
+        )
+
+    return ExerciseListResponse(exercises=exercise_responses)
+
+
+
 @router.get("/{exercise_id}", response_model=ExerciseResponse)
 def get_exercise_by_id(
-    exercise_id: int,
+    exercise_id: str,
     db: Session = Depends(get_db),
 ):
     """
-    Get detailed information for a specific exercise.
+    Get detailed information for a specific exercise, by ExerciseDB exerciseId.
+    If the external API fails, we fall back to mock data (matching external_id or id).
     """
-    # Find exercise in mock data
-    exercise = next((e for e in MOCK_EXERCISES if e["id"] == exercise_id), None)
+    detail = fetch_exercisedb_detail(exercise_id)
+    if detail:
+        mapped = map_exercisedb_to_exercise(detail, index=0)
+        return ExerciseResponse(
+            id=mapped["id"],
+            name=mapped["name"],
+            type=mapped["type"],
+            muscle_group=mapped["muscle_group"],
+            body_part=mapped.get("body_part"),
+            equipment_type=mapped.get("equipment_type"),
+            thumbnail_url=mapped.get("thumbnail_url"),
+            gif_url=mapped.get("gif_url"),
+            instructions=mapped.get("instructions", []),
+            external_id=mapped.get("external_id"),
+            created_at=datetime.now(),
+        )
+
+    # Fallback: look in mock data
+    exercise = None
+
+    for e in MOCK_EXERCISES:
+        if e.get("external_id") == exercise_id:
+            exercise = e
+            break
+
+    if exercise is None and exercise_id.isdigit():
+        num_id = int(exercise_id)
+        exercise = next((e for e in MOCK_EXERCISES if e["id"] == num_id), None)
 
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")
@@ -396,9 +542,9 @@ def get_exercise_by_id(
         equipment_type=exercise.get("equipment_type"),
         thumbnail_url=exercise.get("thumbnail_url"),
         gif_url=exercise.get("gif_url"),
-        instructions=exercise.get("instructions"),
+        instructions=exercise.get("instructions", []),
         external_id=exercise.get("external_id"),
-        created_at=datetime.now()
+        created_at=datetime.now(),
     )
 
 
@@ -410,27 +556,43 @@ def add_exercise_to_workout(
 ):
     """
     Add an exercise to the user's workout plan.
-    Requires authentication.
+
+    We treat `exercise_data.exercise_id` as:
+    - the ExerciseDB exerciseId (string), e.g. "exr_41n2h...",
+      or as a fallback, a numeric id of a local Exercise.
     """
-    # Check if exercise exists in mock data
-    exercise = next((e for e in MOCK_EXERCISES if e["id"] == exercise_data.exercise_id), None)
 
-    if not exercise:
-        raise HTTPException(status_code=404, detail="Exercise not found")
+    # Normalize to string so we can use it for external_id when needed
+    raw_id = str(exercise_data.exercise_id)
 
-    # Check if user already added this exercise
-    existing = db.query(UserWorkoutExercise).filter(
-        UserWorkoutExercise.user_id == current_user.id,
-        UserWorkoutExercise.exercise_id == exercise_data.exercise_id
-    ).first()
+    # If it looks like an ExerciseDB id (starts with "exr_"), treat as external_id
+    if raw_id.startswith("exr_"):
+        exercise_row = get_or_create_exercise_from_external(db, raw_id)
+    else:
+        # Fallback: assume it's a local exercises.id
+        exercise_row = db.query(Exercise).filter(Exercise.id == int(raw_id)).first()
+        if not exercise_row:
+            raise HTTPException(status_code=404, detail="Exercise not found")
+
+    # Check if user already has this exercise in their workout
+    existing = (
+        db.query(UserWorkoutExercise)
+        .filter(
+            UserWorkoutExercise.user_id == current_user.id,
+            UserWorkoutExercise.exercise_id == exercise_row.id,
+        )
+        .first()
+    )
 
     if existing:
-        raise HTTPException(status_code=400, detail="Exercise already added to your workout")
+        raise HTTPException(
+            status_code=400, detail="Exercise already added to your workout"
+        )
 
-    # Create workout exercise entry
+    # Create user_workout_exercises row
     workout_exercise = UserWorkoutExercise(
         user_id=current_user.id,
-        exercise_id=exercise_data.exercise_id,
+        exercise_id=exercise_row.id,  # numeric FK to exercises.id
     )
 
     db.add(workout_exercise)
@@ -444,6 +606,7 @@ def add_exercise_to_workout(
             id=workout_exercise.id,
             user_id=workout_exercise.user_id,
             exercise_id=workout_exercise.exercise_id,
-            created_at=workout_exercise.created_at
-        )
+            created_at=workout_exercise.created_at,
+        ),
     )
+

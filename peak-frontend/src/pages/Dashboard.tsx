@@ -6,6 +6,7 @@ import ViewLeaderBoard from "../components/dashboard/leaderboard";
 import ViewChallenges from "../components/dashboard/challenges";
 import WorkoutMeal from "../components/dashboard/workout-meals";
 import { useAuth } from "../context/AuthContext";
+import StartWorkoutModal from "../components/workouts/StartWorkoutModal";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -32,10 +33,16 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
 
   const [leaderboardRefreshKey, setLeaderboardRefreshKey] = useState(0);
+  const [showWorkoutModal, setShowWorkoutModal] = useState(false);
+
+  // 🔑 whenever this changes, we re-fetch calendar data
+  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchCalendar = async () => {
       try {
+        setLoading(true);
+
         const headers: HeadersInit = {
           "Content-Type": "application/json",
         };
@@ -73,7 +80,7 @@ export default function Dashboard() {
       setLoading(false);
       setError("You must be logged in to view your dashboard.");
     }
-  }, [token]);
+  }, [token, calendarRefreshKey]); // 👈 re-run when a workout is saved
 
   const workoutDates = calendarData?.workoutDates ?? [];
   const mealDates = calendarData?.mealDates ?? [];
@@ -109,9 +116,20 @@ export default function Dashboard() {
           </div>
 
           <div className="mt-12 flex justify-center">
-            <WorkoutMeal />
+            <WorkoutMeal onStartWorkout={() => setShowWorkoutModal(true)} />
           </div>
         </>
+      )}
+
+      {showWorkoutModal && (
+        <StartWorkoutModal
+          isOpen={showWorkoutModal}
+          onClose={() => setShowWorkoutModal(false)}
+          // 🔴 when a workout is saved, bump this key to re-fetch calendar
+          onWorkoutSaved={() =>
+            setCalendarRefreshKey((prev) => prev + 1)
+          }
+        />
       )}
     </div>
   );

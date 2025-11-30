@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Union
+
 
 
 class ExerciseBase(BaseModel):
@@ -31,7 +32,7 @@ class ExerciseListResponse(BaseModel):
 
 
 class UserWorkoutExerciseCreate(BaseModel):
-    exercise_id: int
+    exercise_id: Union[str, int]
 
 
 class UserWorkoutExerciseResponse(BaseModel):

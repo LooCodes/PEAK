@@ -1,10 +1,11 @@
+// src/pages/Exercise.tsx
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
 import ExerciseCard from "../components/exercise/ExerciseCard";
 import ExerciseInfoModal from "../components/exercise/ExerciseInfoModal";
 
-type Exercise = {
+export type Exercise = {
   id: number;
   name: string;
   type: string;
@@ -14,38 +15,48 @@ type Exercise = {
   thumbnail_url: string | null;
   gif_url: string | null;
   instructions: string[] | null;
-  external_id: string | null;
+  external_id: string | null; // ExerciseDB exerciseId
 };
 
 type ExerciseListResponse = {
   exercises: Exercise[];
 };
 
-const Exercise = () => {
+const ExercisePage = () => {
   const { isAuthenticated } = useAuth();
+
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedBodyPart, setSelectedBodyPart] = useState<string | null>(null);
-  const [selectedEquipmentType, setSelectedEquipmentType] = useState<string | null>(null);
+
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
 
-  const bodyParts = ["Chest", "Back", "Legs", "Arms", "Shoulders", "Cardio"];
-  const equipmentTypes = ["At Home", "Free Weights", "Machine", "Bands"];
+  // "browse" = API search; "saved" = user's saved workouts
+  const [viewMode, setViewMode] = useState<"browse" | "saved">("browse");
 
+  // Initial load based on viewMode
   useEffect(() => {
-    fetchExercises();
-  }, [selectedBodyPart, selectedEquipmentType]);
+    if (viewMode === "browse") {
+      fetchExercises();
+    } else {
+      fetchSavedExercises();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode]);
 
-  const fetchExercises = async () => {
+  const fetchExercises = async (term?: string) => {
     try {
       setLoading(true);
       setError(null);
 
-      const params: { body_part?: string; equipment_type?: string } = {};
-      if (selectedBodyPart) params.body_part = selectedBodyPart;
-      if (selectedEquipmentType) params.equipment_type = selectedEquipmentType;
+      const params: { query?: string } = {};
+      const trimmed = term !== undefined ? term.trim() : searchTerm.trim();
+
+      if (trimmed.length > 0) {
+        params.query = trimmed;
+      }
 
       const res = await api.get<ExerciseListResponse>("/exercises", {
         params,
@@ -60,119 +71,131 @@ const Exercise = () => {
     }
   };
 
-  const handleAddExercise = async (exerciseId: number) => {
+  const fetchSavedExercises = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await api.get<ExerciseListResponse>("/exercises/saved");
+      setExercises(res.data.exercises || []);
+    } catch (err) {
+      console.error("Error fetching saved exercises:", err);
+      setError("Failed to load your saved workouts. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Searching only makes sense in "browse" mode.
+    if (viewMode !== "browse") {
+      setViewMode("browse");
+    }
+
+    fetchExercises(searchTerm);
+  };
+
+  const handleAddExercise = async (exercise: Exercise) => {
     if (!isAuthenticated) {
       alert("Please log in to add exercises to your workout.");
       return;
     }
 
+    // Prefer the external ExerciseDB ID if available (e.g. "exr_41n2h...")
+    const exerciseIdForBackend = exercise.external_id ?? exercise.id.toString();
+
     try {
       await api.post("/exercises/user/workout-exercises", {
-        exercise_id: exerciseId,
+        exercise_id: exerciseIdForBackend,
       });
-      alert("Exercise added to your workout!");
+      alert("Exercise added to your saved workouts!");
+
+      // If we're currently viewing saved workouts, refresh the list
+      if (viewMode === "saved") {
+        fetchSavedExercises();
+      }
     } catch (err: any) {
       console.error("Error adding exercise:", err);
       if (err.response?.status === 400) {
-        alert(err.response?.data?.detail || "Exercise already in your workout.");
+        alert(err.response?.data?.detail || "Exercise already in your saved list.");
+      } else if (err.response?.status === 404) {
+        alert(err.response?.data?.detail || "Exercise not found.");
       } else {
         alert("Failed to add exercise. Please try again.");
       }
     }
   };
 
-  const handleBodyPartClick = (bodyPart: string) => {
-    if (selectedBodyPart === bodyPart) {
-      setSelectedBodyPart(null);
-    } else {
-      setSelectedBodyPart(bodyPart);
+  const handleCardClick = async (exercise: Exercise) => {
+    // Open modal immediately with summary data
+    setSelectedExercise(exercise);
+    if (!exercise.external_id) return; // mock / local-only case
+
+    try {
+      setDetailLoading(true);
+      const res = await api.get<Exercise>(`/exercises/${exercise.external_id}`);
+      setSelectedExercise(res.data);
+    } catch (err) {
+      console.error("Error fetching exercise details:", err);
+    } finally {
+      setDetailLoading(false);
     }
-  };
-
-  const handleEquipmentClick = (equipment: string) => {
-    setSelectedEquipmentType(equipment);
-    setShowMoreMenu(false);
-  };
-
-  const clearFilters = () => {
-    setSelectedBodyPart(null);
-    setSelectedEquipmentType(null);
   };
 
   return (
     <div className="min-h-screen bg-[#212121] pt-24 pb-10 px-4">
-      {/* Hero area with placeholders */}
+      {/* Hero area */}
       <div className="max-w-5xl mx-auto mb-6">
-        <div className="flex gap-4 mb-4">
-          <div className="flex-1 bg-[#1a1a1a] border border-[#333] rounded-2xl h-32 flex items-center justify-center">
-            <span className="text-gray-500 text-sm">Promo Image 1</span>
-          </div>
-          <div className="flex-1 bg-[#1a1a1a] border border-[#333] rounded-2xl h-32 flex items-center justify-center">
-            <span className="text-gray-500 text-sm">Promo Image 2</span>
-          </div>
-        </div>
-        <h2 className="text-4xl font-extrabold text-center mb-6">WORKOUT!</h2>
-      </div>
+        <h2 className="text-4xl font-extrabold text-center mb-2">WORKOUT!</h2>
 
-      {/* Filter chips */}
-      <div className="max-w-5xl mx-auto mb-6">
-        <div className="flex flex-wrap gap-2 items-center">
-          {bodyParts.map((part) => (
-            <button
-              key={part}
-              onClick={() => handleBodyPartClick(part)}
-              className={`px-4 py-2 rounded-full border transition ${
-                selectedBodyPart === part
-                  ? "bg-blue-600 border-blue-600 text-white"
-                  : "bg-[#1a1a1a] border-[#333] hover:border-blue-500"
-              }`}
-            >
-              {part}
-            </button>
-          ))}
+        {/* Search bar */}
+        <form
+          onSubmit={handleSearchSubmit}
+          className="mt-4 flex items-center gap-2 justify-center"
+        >
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search exercises (e.g., bench press, squat)"
+            className="w-full max-w-xl px-4 py-2 rounded-full bg-[#1a1a1a] border border-[#333] text-sm text-gray-200 focus:outline-none focus:border-blue-500"
+            disabled={viewMode === "saved"}
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition disabled:opacity-50"
+            disabled={viewMode === "saved"}
+          >
+            Search
+          </button>
+        </form>
 
-          {/* More dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowMoreMenu(!showMoreMenu)}
-              className={`px-4 py-2 rounded-full border transition ${
-                selectedEquipmentType
-                  ? "bg-blue-600 border-blue-600 text-white"
-                  : "bg-[#1a1a1a] border-[#333] hover:border-blue-500"
-              }`}
-            >
-              More ▾
-            </button>
-
-            {showMoreMenu && (
-              <div className="absolute top-full mt-2 bg-[#1a1a1a] border border-[#333] rounded-xl shadow-lg z-10 min-w-[160px]">
-                <div className="p-2">
-                  <p className="text-xs text-gray-400 px-3 py-1">Equipment</p>
-                  {equipmentTypes.map((equipment) => (
-                    <button
-                      key={equipment}
-                      onClick={() => handleEquipmentClick(equipment)}
-                      className={`w-full text-left px-3 py-2 rounded-lg hover:bg-[#2a2a2a] transition ${
-                        selectedEquipmentType === equipment ? "text-blue-500" : ""
-                      }`}
-                    >
-                      {equipment}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Clear filters button */}
-          {(selectedBodyPart || selectedEquipmentType) && (
-            <button
-              onClick={clearFilters}
-              className="px-4 py-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition"
-            >
-              Clear Filters
-            </button>
-          )}
+        {/* View toggle: Browse vs Saved */}
+        <div className="mt-4 flex justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => setViewMode("browse")}
+            className={`px-4 py-2 rounded-full text-sm border transition ${
+              viewMode === "browse"
+                ? "bg-blue-600 border-blue-600 text-white"
+                : "bg-[#1a1a1a] border-[#333] text-gray-200 hover:border-blue-500"
+            }`}
+          >
+            Browse Exercises
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("saved")}
+            className={`px-4 py-2 rounded-full text-sm border transition ${
+              viewMode === "saved"
+                ? "bg-emerald-600 border-emerald-600 text-white"
+                : "bg-[#1a1a1a] border-[#333] text-gray-200 hover:border-emerald-500"
+            }`}
+          >
+            Saved Workouts
+          </button>
         </div>
       </div>
 
@@ -181,20 +204,30 @@ const Exercise = () => {
         {error && <p className="text-red-400 mb-4">{error}</p>}
 
         {loading ? (
-          <p className="text-center text-gray-400">Loading exercises...</p>
+          <p className="text-center text-gray-400">
+            {viewMode === "saved"
+              ? "Loading your saved workouts..."
+              : "Loading exercises..."}
+          </p>
         ) : exercises.length === 0 ? (
           <p className="text-center text-gray-400">
-            No exercises found. Try adjusting your filters.
+            {viewMode === "saved"
+              ? "You haven't saved any exercises yet. Browse and press 'Add' to save them."
+              : "No exercises found. Try a different search."}
           </p>
         ) : (
           <div className="space-y-3">
             {exercises.map((exercise) => (
               <ExerciseCard
-                key={exercise.id}
+                key={`${exercise.external_id ?? "mock"}-${exercise.id}`}
                 exercise={exercise}
                 isAuthenticated={isAuthenticated}
-                onCardClick={() => setSelectedExercise(exercise)}
-                onAddClick={() => handleAddExercise(exercise.id)}
+                onCardClick={() => handleCardClick(exercise)}
+                onAddClick={
+                  viewMode === "saved"
+                    ? undefined // ✅ no Add button in Saved mode
+                    : () => handleAddExercise(exercise)
+                }
               />
             ))}
           </div>
@@ -206,10 +239,11 @@ const Exercise = () => {
         <ExerciseInfoModal
           exercise={selectedExercise}
           onClose={() => setSelectedExercise(null)}
+          isLoadingDetails={detailLoading}
         />
       )}
     </div>
   );
 };
 
-export default Exercise;
+export default ExercisePage;
