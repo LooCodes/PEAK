@@ -1,54 +1,77 @@
 # 🏔️ PEAK
 
-A fitness web application built with **React + TypeScript + Vite (frontend)** and **Python (backend)**.
+A fitness web application built with:
+
+- Frontend: React + TypeScript + Vite  
+- Backend: Python (FastAPI) with Uvicorn
 
 ---
 
-## 🧩 Prerequisites
+## 🚀 Getting Started
 
-Install **pnpm** globally (one-time per machine):
+### 1. Clone the Repository and Enter the Project
+
+```bash
+git clone https://github.com/LooCodes/PEAK.git
+cd PEAK
+```
+
+---
+
+## 📦 Install pnpm (one time per computer)
+
+If you do not already have pnpm installed, run:
 
 ```bash
 npm install -g pnpm
 ```
 
+---
+
 ## ⚡ Frontend Setup
-### 1. Go to the frontend app
+
+> The frontend should run in its own terminal window.
+
+### 1. Go to the frontend folder
+
 ```bash
 cd peak-frontend
 ```
 
-### 2. Install Dependencies
-Use **pnpm** (recommended for faster installs and smaller disk usage):
+### 2. Install dependencies
+
 ```bash
 pnpm install
 ```
 
-### 2. Start the Development Server
+### 3. Start the frontend development server
+
 ```bash
 pnpm run dev
 ```
 
-Your app will be available at **http://localhost:5173**
+The frontend will be available at:
 
-### 3. Notes
-- Tailwind CSS v4 is configured with PostCSS + Vite (no `tailwind.config.js` needed by default).
-- Environment variables (if any) can go in a `.env.local` file:
-  ```bash
-  VITE_API_URL=http://localhost:8000
+http://localhost:5173
 
-To add new packages:
+Keep this terminal open while working on the frontend.
+
+---
+
+## 🐍 Backend Setup
+
+> The backend should run in a separate terminal window.
+
+### 1. Go to the backend folder
+
+From the project root:
 
 ```bash
-pnpm add <package-name>
+cd backend
 ```
+### 2. Create and activate a Python virtual environment
 
-
-
-🐍 Backend Setup
-1. Create and Activate a Python Virtual Environment
-
-Mac/Linux:
+Mac or Linux:
 
 ```bash
 python3 -m venv .venv
@@ -58,16 +81,70 @@ source .venv/bin/activate
 Windows (PowerShell):
 
 ```powershell
-python -m venv .venv
-.venv\Scripts\activate
+python -m venv .venv\Scripts\activate
 ```
 
-2. Install Dependencies
+Once activated, you should see (.venv) at the start of your terminal prompt.
+
+### 3. Install backend dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Run the Backend
+### 4. Configure backend environment variables (required)
 
-TBD
+The backend requires environment variables for API keys and database access.  
+These values are not included in this repository for security reasons.
+
+Please reach out to a team member to receive the required .env file or values.
+```bash
+# backend/.env
+
+DATABASE_URL
+NUTRITION_API_KEY
+EXERCISEDB_API_KEY
+EXERCISEDB_API_HOST
+```
+
+### 5. Run the backend server
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+The backend API will be available at:
+
+http://localhost:8000
+
+Keep this terminal open while working on the backend.
+
+---
+
+## ✅ Development Notes
+
+- Always run frontend and backend in separate terminals.
+- The backend will not function without proper environment variables.
+- Restart the backend after dependency changes.
+- If the backend is down, the frontend will not load data correctly.
+
+---
+
+## ✅ Typical Workflow
+
+### Terminal 1 (frontend)
+```bash
+cd peak-frontend
+pnpm run dev
+```
+
+### Terminal 2 (backend)
+```bash
+cd backend
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+uvicorn app.main:app --port 8000
+```
+
+---
+
+You are now ready to work on PEAK 💪
