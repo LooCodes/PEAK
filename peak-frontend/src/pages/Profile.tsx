@@ -133,6 +133,12 @@ const Profile: React.FC = () => {
                 <div className="mb-4">
                   <button
                     onClick={async () => {
+                      // toggle: hide if already shown
+                      if (latestAnswers.length > 0) {
+                        setLatestAnswers([]);
+                        return;
+                      }
+
                       setAnswersLoading(true);
                       try {
                         const res = await api.get('/questionnaire/latest');
@@ -146,14 +152,14 @@ const Profile: React.FC = () => {
                     }}
                     className="w-full bg-[#111111] text-white rounded-lg py-3 font-semibold"
                   >
-                    {answersLoading ? 'Loading...' : 'Show Latest Questionnaire'}
+                    {answersLoading ? 'Loading...' : latestAnswers.length > 0 ? 'Hide Latest Questionnaire' : 'Show Latest Questionnaire'}
                   </button>
                 </div>
 
                 {latestAnswers.length > 0 && (
                   <div className="mt-4 bg-[#0f0f0f] rounded-lg p-4">
                     <div className="font-semibold mb-2">Most Recent Answers</div>
-                    <div className="text-sm text-gray-300 space-y-2">
+                    <div className="text-sm text-gray-300 space-y-2 max-h-64 overflow-auto pr-2">
                       {latestAnswers.map((a) => (
                         <div key={a.question_id}>
                           <div className="font-medium">{a.question_text}</div>
