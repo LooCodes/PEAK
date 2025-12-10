@@ -7,7 +7,8 @@ import traceback
 
 from db import Base, engine
 from models import *   # noqa: F401,F403 (loads User, Meal, Workout, etc.)
-from .routers import dashboard, auth, nutrition, leaderboard, challenges, exercises, workouts, meal_logger, workout_bests, questionnaire
+from .routers import dashboard, auth, nutrition, leaderboard, challenges, exercises, workouts, meal_logger, workout_bests, questionnaire, admin
+from .scheduler import start_scheduler, shutdown_scheduler
 
 load_dotenv()
 
@@ -15,6 +16,21 @@ load_dotenv()
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="PEAK Backend", version="0.1.0")
+
+# Global scheduler instance
+scheduler = None
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize the weekly leaderboard reset scheduler"""
+    global scheduler
+    scheduler = start_scheduler()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Gracefully shutdown the scheduler"""
+    global scheduler
+    shutdown_scheduler(scheduler)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -70,3 +86,6 @@ app.include_router(workout_bests.router)
 
 # Questionnaire router
 app.include_router(questionnaire.router)
+
+# Admin router
+app.include_router(admin.router)
