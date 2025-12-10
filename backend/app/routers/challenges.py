@@ -36,6 +36,25 @@ def _to_status(
     challenge: Challenge,
     user_challenge: UserChallenge | None,
 ) -> ChallengeStatus:
+    """
+    Convert a challenge and its user progress into a ChallengeStatus.
+    Only consider the challenge completed if it was completed in the current rotation period:
+    - Daily challenges: completed today
+    - Weekly challenges: completed this week
+    """
+    completed = False
+    if user_challenge and user_challenge.completed_at:
+        today = date.today()
+        completed_date = user_challenge.completed_at.date()
+        
+        if challenge.type.lower() == "daily":
+            # Only completed if done today
+            completed = (completed_date == today)
+        elif challenge.type.lower() == "weekly":
+            # Only completed if done this week
+            week_start = today - timedelta(days=today.weekday())
+            completed = (completed_date >= week_start)
+    
     return ChallengeStatus(
         user_challenge_id=user_challenge.id if user_challenge else None,
         challenge_id=challenge.id,
@@ -43,7 +62,7 @@ def _to_status(
         title=challenge.title,
         description=challenge.description,
         points=challenge.points,
-        completed=bool(user_challenge and user_challenge.completed_at),
+        completed=completed,
         streak_delta=user_challenge.streak_delta if user_challenge else 0,
     )
 
@@ -104,13 +123,37 @@ def get_user_challenges(
     db: Session = Depends(get_db),
 ):
     """
-    Raw user_challenges rows for this user.
-    Mostly useful for debugging; dashboard should use /user/dashboard.
+    Return user_challenges that are relevant for the current rotation period:
+    - Daily challenges: only show as completed if completed today
+    - Weekly challenges: only show as completed if completed this week
     """
-    user_challenges = db.query(UserChallenge).filter(
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())
+    week_start_datetime = datetime.combine(week_start, datetime.min.time()).replace(tzinfo=timezone.utc)
+    today_start_datetime = datetime.combine(today, datetime.min.time()).replace(tzinfo=timezone.utc)
+    
+    user_challenges = db.query(UserChallenge).join(Challenge).filter(
         UserChallenge.user_id == current_user.id
     ).all()
-    return user_challenges
+    
+    # Filter completions based on rotation period
+    filtered_challenges = []
+    for uc in user_challenges:
+        if uc.completed_at:
+            # Check if this completion is still valid for current rotation
+            if uc.challenge.type.lower() == "daily":
+                # Only show as completed if completed today
+                if uc.completed_at >= today_start_datetime:
+                    filtered_challenges.append(uc)
+            elif uc.challenge.type.lower() == "weekly":
+                # Only show as completed if completed this week
+                if uc.completed_at >= week_start_datetime:
+                    filtered_challenges.append(uc)
+        else:
+            # Include uncompleted challenges
+            filtered_challenges.append(uc)
+    
+    return filtered_challenges
 
 
 # ===================== DASHBOARD ENDPOINT (GLOBAL + PROGRESS) =====================
@@ -121,15 +164,50 @@ def get_user_dashboard_challenges(
     db: Session = Depends(get_db),
 ):
     """
-    Dashboard view:
+    Dashboard view with rotating challenges:
 
-    - Start from ALL global challenges.
+    - Return 2 daily challenges (rotating daily)
+    - Return 2 weekly challenges (rotating weekly)
     - Look up corresponding UserChallenge for this user (if any).
     - Return ChallengeStatus objects, grouped into daily / weekly.
     """
 
-    # 1) Global pool
-    challenges = db.query(Challenge).all()
+    today = date.today()
+    # Monday of the current week; used as "seed" so weekly selection is stable for that week
+    week_start = today - timedelta(days=today.weekday())
+
+    # 1) Get rotating challenges (2 daily + 2 weekly)
+    daily_challenges = (
+        db.query(Challenge)
+        .filter(Challenge.type.ilike("daily"))
+        .order_by(
+            func.md5(
+                func.concat(
+                    cast(Challenge.id, String),
+                    cast(today, String),       # changes every day
+                )
+            )
+        )
+        .limit(2)
+        .all()
+    )
+
+    weekly_challenges = (
+        db.query(Challenge)
+        .filter(Challenge.type.ilike("weekly"))
+        .order_by(
+            func.md5(
+                func.concat(
+                    cast(Challenge.id, String),
+                    cast(week_start, String),   # changes once per week
+                )
+            )
+        )
+        .limit(2)
+        .all()
+    )
+
+    challenges = daily_challenges + weekly_challenges
 
     # 2) User-specific progress for this user
     user_challenges = db.query(UserChallenge).filter(
@@ -292,17 +370,43 @@ def complete_challenge(
             "completed": True,
             "weekly_xp": db_user.weekly_xp,
             "total_xp": db_user.total_xp,
+            "streak": db_user.streak,
         }
 
-    # 5) Mark as completed
-    uc.completed_at = datetime.now(timezone.utc)
+    # 5) Check if streak should reset or increment (based on days, not every challenge)
+    now = datetime.now(timezone.utc)
+    should_increment_streak = False
+    
+    if db_user.last_challenge_completed_at:
+        time_since_last = now - db_user.last_challenge_completed_at
+        
+        if time_since_last.total_seconds() > 86400:  # More than 24 hours = 1 day
+            # Check if it's been more than 2 days (48 hours) - if so, reset streak
+            if time_since_last.total_seconds() > 172800:  # 48 hours = 172800 seconds
+                db_user.streak = 0  # Reset streak if more than 2 days passed
+                should_increment_streak = True  # Start new streak with this challenge
+            else:
+                # It's a new day (within 48 hours) - increment streak
+                should_increment_streak = True
+        # else: Same day, don't increment streak
+    else:
+        # First challenge ever - start streak at 1
+        should_increment_streak = True
+    
+    # 6) Mark as completed
+    uc.completed_at = now
 
-    # 6) Award XP
+    # 7) Award XP
     points = challenge.points or 0
     db_user.weekly_xp = (db_user.weekly_xp or 0) + points
     db_user.total_xp = (db_user.total_xp or 0) + points
+    
+    # 8) Increment streak only once per day and update last completion time
+    if should_increment_streak:
+        db_user.streak = (db_user.streak or 0) + 1
+    db_user.last_challenge_completed_at = now
 
-    # 7) Save + refresh ONLY db_user and uc (NOT current_user)
+    # 9) Save + refresh ONLY db_user and uc (NOT current_user)
     db.commit()
     db.refresh(uc)
     db.refresh(db_user)
@@ -311,4 +415,5 @@ def complete_challenge(
         "completed": True,
         "weekly_xp": db_user.weekly_xp,
         "total_xp": db_user.total_xp,
+        "streak": db_user.streak,
     }

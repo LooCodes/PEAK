@@ -26,7 +26,7 @@ type CompleteResponse = {
 };
 
 export default function Dashboard() {
-  const { token } = useAuth();
+  const { token, refreshUser } = useAuth();
   const [calendarData, setCalendarData] = useState<CalendarApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -122,6 +122,7 @@ export default function Dashboard() {
     _challengeId: number
   ) => {
     setLeaderboardRefreshKey((prev) => prev + 1);
+    refreshUser();
   };
 
   return (
