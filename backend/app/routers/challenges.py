@@ -364,8 +364,23 @@ def complete_challenge(
         db.add(uc)
         db.flush()  # get uc.id without a full commit yet
 
-    # 4) If already completed, don't double-award XP
+    # 4) Check if already completed IN THE CURRENT ROTATION PERIOD
+    today = date.today()
+    now = datetime.now(timezone.utc)
+    already_completed_in_period = False
+    
     if uc.completed_at:
+        completed_date = uc.completed_at.date()
+        
+        if challenge.type.lower() == "daily":
+            # Check if completed today
+            already_completed_in_period = (completed_date == today)
+        elif challenge.type.lower() == "weekly":
+            # Check if completed this week
+            week_start = today - timedelta(days=today.weekday())
+            already_completed_in_period = (completed_date >= week_start)
+    
+    if already_completed_in_period:
         return {
             "completed": True,
             "weekly_xp": db_user.weekly_xp,
@@ -373,22 +388,31 @@ def complete_challenge(
             "streak": db_user.streak,
         }
 
-    # 5) Check if streak should reset or increment (based on days, not every challenge)
-    now = datetime.now(timezone.utc)
+    # 5) Check if streak should reset or increment (based on EST timezone days)
+    # Use EST timezone for day boundaries
+    from zoneinfo import ZoneInfo
+    est = ZoneInfo("America/New_York")
+    
+    now_est = now.astimezone(est)
+    today_est = now_est.date()
+    
     should_increment_streak = False
     
     if db_user.last_challenge_completed_at:
-        time_since_last = now - db_user.last_challenge_completed_at
+        last_completed_est = db_user.last_challenge_completed_at.astimezone(est)
+        last_completed_date_est = last_completed_est.date()
         
-        if time_since_last.total_seconds() > 86400:  # More than 24 hours = 1 day
-            # Check if it's been more than 2 days (48 hours) - if so, reset streak
-            if time_since_last.total_seconds() > 172800:  # 48 hours = 172800 seconds
-                db_user.streak = 0  # Reset streak if more than 2 days passed
-                should_increment_streak = True  # Start new streak with this challenge
-            else:
-                # It's a new day (within 48 hours) - increment streak
-                should_increment_streak = True
-        # else: Same day, don't increment streak
+        # Calculate the difference in days
+        days_diff = (today_est - last_completed_date_est).days
+        
+        if days_diff > 1:
+            # More than 1 day gap - streak broken, reset to 0
+            db_user.streak = 0
+            should_increment_streak = True  # Start new streak
+        elif days_diff == 1:
+            # Exactly 1 day later - continue streak
+            should_increment_streak = True
+        # elif days_diff == 0: Same day - don't increment
     else:
         # First challenge ever - start streak at 1
         should_increment_streak = True
