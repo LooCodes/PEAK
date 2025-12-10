@@ -1,8 +1,9 @@
 # backend/app/routers/challenges.py
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func, cast, String   # ✅ this is the correct place
 
 from db.session import SessionLocal
 from models.challenge import Challenge, UserChallenge
@@ -52,11 +53,49 @@ def _to_status(
 @router.get("/", response_model=list[ChallengeResponse])
 def get_all_challenges(db: Session = Depends(get_db)):
     """
-    Get the full global pool of challenges.
-    Returns only data from `challenges` table.
+    Return a rotating subset of challenges for the dashboard:
+    - 2 daily challenges (change every day)
+    - 2 weekly challenges (change every week)
     """
-    challenges = db.query(Challenge).all()
-    return challenges
+
+    today = date.today()
+    # Monday of the current week; used as "seed" so weekly selection is stable for that week
+    week_start = today - timedelta(days=today.weekday())
+
+    # 2 DAILY challenges, randomized but stable for a given date
+    daily_challenges = (
+        db.query(Challenge)
+        .filter(Challenge.type.ilike("daily"))
+        .order_by(
+            func.md5(
+                func.concat(
+                    cast(Challenge.id, String),
+                    cast(today, String),       # changes every day
+                )
+            )
+        )
+        .limit(2)
+        .all()
+    )
+
+    # 2 WEEKLY challenges, randomized but stable for a given week
+    weekly_challenges = (
+        db.query(Challenge)
+        .filter(Challenge.type.ilike("weekly"))
+        .order_by(
+            func.md5(
+                func.concat(
+                    cast(Challenge.id, String),
+                    cast(week_start, String),   # changes once per week
+                )
+            )
+        )
+        .limit(2)
+        .all()
+    )
+
+    # Return 4 total (2 daily + 2 weekly)
+    return daily_challenges + weekly_challenges
 
 
 @router.get("/user", response_model=list[UserChallengeResponse])
