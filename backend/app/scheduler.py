@@ -1,4 +1,3 @@
-# backend/app/scheduler.py
 """
 Weekly scheduler to reset the leaderboard (users.weekly_xp = 0) every Monday at midnight UTC.
 Also checks on startup if a reset is needed.

@@ -206,7 +206,6 @@ const Nutrition = () => {
         />
       )}
 
-      {/* GRAM PROMPT MODAL */}
       {pendingFood && (
         <GramPrompt
           isOpen={isGramPromptOpen}

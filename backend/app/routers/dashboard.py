@@ -1,4 +1,3 @@
-# backend/app/routers/dashboard.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -10,9 +9,9 @@ from models import (
     Workout,
     WorkoutSet,
     Exercise,
-    User,  # optional, but nice for type hints
+    User,
 )
-from auth import get_current_user  # 👈 use your existing auth dependency
+from auth import get_current_user 
 
 router = APIRouter()
 
@@ -20,7 +19,7 @@ router = APIRouter()
 @router.get("/")
 def get_calendar_data(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),  # 👈 logged-in user
+    current_user: User = Depends(get_current_user),  
 ):
     """
     Calendar + dashboard data for the *logged-in* user.
@@ -28,9 +27,8 @@ def get_calendar_data(
     Uses current_user.id from auth instead of a hardcoded user_id.
     """
 
-    user_id = current_user.id  # 👈 no more hardcoding
+    user_id = current_user.id
 
-    # ----- Query meals + workouts just for this user -----
     meals = (
         db.query(Meal)
         .filter(Meal.user_id == user_id)
@@ -45,7 +43,6 @@ def get_calendar_data(
         .all()
     )
 
-    # ----- Compute unique date strings for the calendar -----
     # We send date-only strings ("YYYY-MM-DD") so the frontend doesn't have to parse
     meal_dates_set = {m.eaten_at.date().isoformat() for m in meals if m.eaten_at}
     workout_dates_set = {w.performed_at.date().isoformat() for w in workouts if w.performed_at}
@@ -53,7 +50,6 @@ def get_calendar_data(
     meal_dates = sorted(meal_dates_set)
     workout_dates = sorted(workout_dates_set)
 
-    # ----- Build detailed meal payload -----
     meals_payload = []
     for m in meals:
         items_payload = []
@@ -81,7 +77,6 @@ def get_calendar_data(
             }
         )
 
-    # ----- Build detailed workout payload -----
     workouts_payload = []
     for w in workouts:
         sets_payload = []
@@ -113,13 +108,9 @@ def get_calendar_data(
             }
         )
 
-    # ----- Final response -----
     return {
-        # for the calendar component
         "mealDates": meal_dates,
         "workoutDates": workout_dates,
-
-        # for any detail views / side panels on the dashboard
         "meals": meals_payload,
         "workouts": workouts_payload,
     }

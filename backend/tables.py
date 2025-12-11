@@ -1,8 +1,7 @@
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import declarative_base
 
-# Example with SQLite (in-memory database)
-engine = create_engine("sqlite:///:memory:") # connect to our future cloud based database
+engine = create_engine("sqlite:///:memory:")
 
 Base = declarative_base()
 

@@ -17,9 +17,6 @@ type NutritionInformationProps = {
   onClose: () => void;
 };
 
-// const fmt = (n: number | null | undefined) =>
-//   n !== null && n !== undefined ? n.toFixed(1) : "0.0";
-
 const NutritionInformation = ({ openfood_code, onClose }: NutritionInformationProps) => {
   const [data, setData] = useState<FoodItem | null>(null);
   const [loading, setLoading] = useState(true);

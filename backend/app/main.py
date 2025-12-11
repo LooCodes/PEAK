@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import traceback
 
 from db import Base, engine
-from models import *   # noqa: F401,F403 (loads User, Meal, Workout, etc.)
+from models import *
 from .routers import dashboard, auth, nutrition, leaderboard, challenges, exercises, workouts, meal_logger, workout_bests, questionnaire, admin
 from .scheduler import start_scheduler, shutdown_scheduler
 

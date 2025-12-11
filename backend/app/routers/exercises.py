@@ -1,4 +1,3 @@
-# backend/app/routers/exercises.py
 from fastapi import APIRouter, Depends, HTTPException, Query
 import json
 from sqlalchemy.orm import Session
@@ -22,7 +21,6 @@ from auth import get_current_user
 
 router = APIRouter(prefix="/api/exercises", tags=["exercises"])
 
-# --------- ExerciseDB API config ---------
 EXERCISEDB_API_KEY = os.getenv("EXERCISEDB_API_KEY")
 EXERCISEDB_API_HOST = os.getenv(
     "EXERCISEDB_API_HOST", "exercisedb-api1.p.rapidapi.com"
@@ -36,9 +34,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-# ---------- Helpers for ExerciseDB ----------
 
 
 def _get_headers() -> dict:
@@ -76,7 +71,7 @@ def fetch_exercisedb_search(query: str, limit: int = 50):
             print("Unexpected search response format:", data)
             return None
 
-        results = data["data"]  # list[dict]
+        results = data["data"] 
         print(f"SEARCH returned {len(results)} exercises")
         return results
 
@@ -159,7 +154,7 @@ def map_exercisedb_to_exercise(api_exercise: dict, index: int) -> dict:
     instructions = api_exercise.get("instructions") or []
 
     return {
-        "id": index + 1,  # local index for this response
+        "id": index + 1,
         "name": name,
         "type": exercise_type,
         "muscle_group": muscle_group,
@@ -240,8 +235,6 @@ def get_or_create_exercise_from_external(
         )
 
 
-# ---------- Mock data (fallback) ----------
-
 MOCK_EXERCISES = [
     {
         "id": 1,
@@ -276,7 +269,6 @@ MOCK_EXERCISES = [
         ],
         "external_id": "0002",
     },
-    # ... rest of your MOCK_EXERCISES unchanged ...
     {
         "id": 3,
         "name": "Pull-ups",
@@ -408,9 +400,6 @@ MOCK_EXERCISES = [
         "external_id": "0010",
     },
 ]
-
-
-# ---------- Routes ----------
 
 
 @router.get("/", response_model=ExerciseListResponse)

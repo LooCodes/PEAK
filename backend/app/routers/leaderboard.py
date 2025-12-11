@@ -1,12 +1,9 @@
-# backend/app/routers/leaderboard.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
 from db.session import SessionLocal
 from models.user import User
-# We no longer need LeaderboardEntry for weekly ranking logic
-# from models.leaderboard import LeaderboardEntry
 from auth import get_current_user
 from schemas.leaderboard import LeaderboardItem, LeaderboardSummary
 
@@ -22,8 +19,6 @@ def get_db():
         db.close()
 
 
-# ---------- Helper to build the weekly leaderboard ----------
-# Now based purely on users.weekly_xp
 
 def _build_weekly_leaderboard(db: Session) -> List[LeaderboardItem]:
     """
@@ -44,14 +39,12 @@ def _build_weekly_leaderboard(db: Session) -> List[LeaderboardItem]:
         leaderboard.append(
             LeaderboardItem(
                 username=user.username,
-                weekly_points=user.weekly_xp or 0,  # 👈 this is your weekly_xp
+                weekly_points=user.weekly_xp or 0,
                 rank=idx,
             )
         )
     return leaderboard
 
-
-# ---------- Endpoints ----------
 
 @router.get("/weekly", response_model=List[LeaderboardItem])
 def get_weekly_leaderboard(db: Session = Depends(get_db)):
@@ -84,8 +77,6 @@ def get_my_weekly_rank(
         detail="Leaderboard entry not found for current user",
     )
 
-
-# ---------- Summary endpoint for dashboard card ----------
 
 @router.get("/me/summary", response_model=LeaderboardSummary)
 def get_my_dashboard_summary(

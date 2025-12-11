@@ -199,10 +199,8 @@ const StartWorkoutModal = ({
         return;
       }
 
-      // ✅ Success
+      
       alert("Workout saved!");
-
-      // 🔴 tell Dashboard to refresh calendar
       onWorkoutSaved();
 
       resetForm();

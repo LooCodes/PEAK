@@ -11,8 +11,8 @@ class User(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
     age = Column(Integer)
-    weight = Column(Integer)  # store in kg
-    height = Column(Integer)  # store in cm
+    weight = Column(Integer)
+    height = Column(Integer)
     streak = Column(Integer, default=0, nullable=False)
     last_challenge_completed_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

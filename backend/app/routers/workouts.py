@@ -1,4 +1,3 @@
-# backend/app/routers/workouts.py
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException

@@ -1,9 +1,8 @@
-# backend/app/routers/challenges.py
 from datetime import datetime, timezone, date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func, cast, String   # ✅ this is the correct place
+from sqlalchemy import func, cast, String
 
 from db.session import SessionLocal
 from models.challenge import Challenge, UserChallenge
@@ -19,18 +18,12 @@ from auth import get_current_user
 
 router = APIRouter(prefix="/api/challenges", tags=["challenges"])
 
-
-# ----- DB dependency -----
-
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-
-
-# ----- Helper: global challenge + user progress -> ChallengeStatus -----
 
 def _to_status(
     challenge: Challenge,
@@ -65,9 +58,6 @@ def _to_status(
         completed=completed,
         streak_delta=user_challenge.streak_delta if user_challenge else 0,
     )
-
-
-# ===================== BASIC GLOBAL CHALLENGE ENDPOINTS =====================
 
 @router.get("/", response_model=list[ChallengeResponse])
 def get_all_challenges(db: Session = Depends(get_db)):
@@ -136,27 +126,20 @@ def get_user_challenges(
         UserChallenge.user_id == current_user.id
     ).all()
     
-    # Filter completions based on rotation period
     filtered_challenges = []
     for uc in user_challenges:
         if uc.completed_at:
-            # Check if this completion is still valid for current rotation
             if uc.challenge.type.lower() == "daily":
-                # Only show as completed if completed today
                 if uc.completed_at >= today_start_datetime:
                     filtered_challenges.append(uc)
             elif uc.challenge.type.lower() == "weekly":
-                # Only show as completed if completed this week
                 if uc.completed_at >= week_start_datetime:
                     filtered_challenges.append(uc)
         else:
-            # Include uncompleted challenges
             filtered_challenges.append(uc)
     
     return filtered_challenges
 
-
-# ===================== DASHBOARD ENDPOINT (GLOBAL + PROGRESS) =====================
 
 @router.get("/user/dashboard", response_model=DashboardChallengesResponse)
 def get_user_dashboard_challenges(
@@ -173,10 +156,7 @@ def get_user_dashboard_challenges(
     """
 
     today = date.today()
-    # Monday of the current week; used as "seed" so weekly selection is stable for that week
     week_start = today - timedelta(days=today.weekday())
-
-    # 1) Get rotating challenges (2 daily + 2 weekly)
     daily_challenges = (
         db.query(Challenge)
         .filter(Challenge.type.ilike("daily"))
@@ -184,7 +164,7 @@ def get_user_dashboard_challenges(
             func.md5(
                 func.concat(
                     cast(Challenge.id, String),
-                    cast(today, String),       # changes every day
+                    cast(today, String),
                 )
             )
         )
@@ -199,7 +179,7 @@ def get_user_dashboard_challenges(
             func.md5(
                 func.concat(
                     cast(Challenge.id, String),
-                    cast(week_start, String),   # changes once per week
+                    cast(week_start, String),
                 )
             )
         )
@@ -232,8 +212,6 @@ def get_user_dashboard_challenges(
 
     return DashboardChallengesResponse(daily=daily, weekly=weekly)
 
-
-# ===================== JOIN (optional explicit assignment) =====================
 
 @router.post("/{challenge_id}/join", status_code=status.HTTP_201_CREATED)
 def join_challenge(
@@ -274,8 +252,6 @@ def join_challenge(
         "user_challenge_id": user_challenge.id,
     }
 
-
-# ===================== INCREMENT PROGRESS (unused for checkbox) =====================
 
 @router.post("/user/{challenge_id}/increment", response_model=ChallengeStatus)
 def increment_challenge_progress(

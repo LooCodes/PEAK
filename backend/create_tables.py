@@ -1,8 +1,7 @@
 from db.session import engine
 from db.base import Base
 
-# Import all models so they register with Base.metadata
-from models import *  # noqa: F401,F403
+from models import *
 
 def main():
     print("Creating tables in the database...")
