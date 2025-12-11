@@ -95,7 +95,6 @@ export default function ViewChallenges({ onChallengeCompleted }: ViewChallengesP
 
       setCompleted((prev) => new Set(prev).add(challengeId));
 
-      // 🔔 Tell the parent (Dashboard) so it can refresh leaderboard/XP
       if (onChallengeCompleted) {
         onChallengeCompleted(body, challengeId);
       }

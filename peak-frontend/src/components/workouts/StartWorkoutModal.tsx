@@ -5,7 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 type StartWorkoutModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onWorkoutSaved: () => void; // 🔴 tell Dashboard a workout was saved
+  onWorkoutSaved: () => void; 
 };
 
 type WorkoutSetRow = {

@@ -1,9 +1,10 @@
-// src/pages/Nutrition.tsx
 import { FormEvent, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import FoodResultItem from "../components/nutrition/FoodResultItem";
 import NutritionInformation from "../components/nutrition/NutritionInformation";
+import GramPrompt from "../components/nutrition/GramPrompt";
+import PeakAlert from "../components/PeakAlert";
 
 type FoodSearchItem = {
   id: number;
@@ -19,6 +20,12 @@ type FoodSearchResponse = {
 type MealLabel = "breakfast" | "lunch" | "dinner" | "snack";
 const VALID_LABELS: MealLabel[] = ["breakfast", "lunch", "dinner", "snack"];
 
+type PendingFood = {
+  foodId: number;
+  name: string;
+  caloriesPer100g: number;
+};
+
 const Nutrition = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodSearchItem[]>([]);
@@ -26,7 +33,12 @@ const Nutrition = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
 
+  const [pendingFood, setPendingFood] = useState<PendingFood | null>(null);
+  const [isGramPromptOpen, setIsGramPromptOpen] = useState(false);
+
   const [searchParams] = useSearchParams();
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+
   const navigate = useNavigate();
 
   const presetLabelRaw = (searchParams.get("label") || "").toLowerCase();
@@ -34,7 +46,7 @@ const Nutrition = () => {
     ? (presetLabelRaw as MealLabel)
     : null;
 
-  const isFromLogger = !!presetLabel; // 👈 only true when we came from meal-logger
+  const isFromLogger = !!presetLabel;
 
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
@@ -58,30 +70,21 @@ const Nutrition = () => {
     }
   };
 
-  const handleAddToMealLogger = async (
+  const handleAddToMealLogger = (
     foodId: number,
     name: string,
     caloriesPer100g: number
   ) => {
-    if (!presetLabel) {
-      // Shouldn’t happen if we guarded correctly, but just in case
-      return;
-    }
+    if (!presetLabel) return;
+
+    setPendingFood({ foodId, name, caloriesPer100g });
+    setIsGramPromptOpen(true);
+  };
+
+  const submitGrams = async (grams: number) => {
+    if (!presetLabel || !pendingFood) return;
 
     try {
-      const qtyStr = window.prompt(
-        `How many grams of "${name}" did you eat?`,
-        "100"
-      );
-      if (!qtyStr) return;
-
-      const qty = Number(qtyStr);
-      if (!Number.isFinite(qty) || qty <= 0) {
-        window.alert("Quantity must be a positive number.");
-        return;
-      }
-
-      // Fetch existing log (if any)
       type MealItemForPayload = {
         food_id: number;
         qty: number;
@@ -107,7 +110,7 @@ const Nutrition = () => {
       } catch (err: any) {
         if (err.response?.status !== 404) {
           console.error("Error fetching today's meal log before Add:", err);
-          window.alert("Something went wrong while reading today's log.");
+          setAlertMessage("Something went wrong while reading today's log.");
           return;
         }
       }
@@ -117,8 +120,8 @@ const Nutrition = () => {
         items: [
           ...existingItems,
           {
-            food_id: foodId,
-            qty,
+            food_id: pendingFood.foodId,
+            qty: grams,
             meal_label: presetLabel,
           },
         ],
@@ -126,11 +129,13 @@ const Nutrition = () => {
 
       await api.post("/meal-logger/complete", payload);
 
-      // ✅ Go back to dashboard and re-open logger
+      setIsGramPromptOpen(false);
+      setPendingFood(null);
+
       navigate("/dashboard?openMealLogger=1");
     } catch (err) {
       console.error("Error adding food to meal logger:", err);
-      window.alert("Failed to add this food to your meal log.");
+      setAlertMessage("Failed to add this food to your meal log.");
     }
   };
 
@@ -138,7 +143,7 @@ const Nutrition = () => {
     <div className="min-h-screen bg-[#212121] pt-24 pb-10 px-4 flex justify-center">
       <div className="w-full max-w-5xl">
         <h1 className="text-3xl md:text-4xl font-extrabold tracking-wide pt-22 text-center">
-          EAT!
+          FOOD.
         </h1>
 
         {isFromLogger && presetLabel && (
@@ -152,12 +157,11 @@ const Nutrition = () => {
           onSubmit={handleSearch}
           className="mb-8 bg-[#181818] border border-[#2a2a2a] rounded-2xl px-5 py-3 flex items-center gap-3"
         >
-          <span className="text-xl">🔍</span>
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search for a meal..."
+            placeholder="Search for food..."
             className="w-full bg-transparent outline-none text-sm md:text-base"
           />
           <button
@@ -189,20 +193,37 @@ const Nutrition = () => {
                 calories={item.calories_per_100g ?? 0}
                 openfood_code={item.openfood_code}
                 onPress={(code) => code && setSelectedCode(code)}
-                // 👇 Only pass onAdd when we came from the logger
-                onAdd={
-                  isFromLogger
-                    ? handleAddToMealLogger
-                    : undefined
-                }
+                onAdd={isFromLogger ? handleAddToMealLogger : undefined}
               />
             ))}
         </div>
       </div>
+
       {selectedCode && (
         <NutritionInformation
           openfood_code={selectedCode}
           onClose={() => setSelectedCode(null)}
+        />
+      )}
+
+      {/* GRAM PROMPT MODAL */}
+      {pendingFood && (
+        <GramPrompt
+          isOpen={isGramPromptOpen}
+          foodName={pendingFood.name}
+          defaultValue="100"
+          onClose={() => {
+            setIsGramPromptOpen(false);
+            setPendingFood(null);
+          }}
+          onSubmit={submitGrams}
+        />
+      )}
+
+      {alertMessage && (
+        <PeakAlert
+          message={alertMessage}
+          onClose={() => setAlertMessage(null)}
         />
       )}
     </div>

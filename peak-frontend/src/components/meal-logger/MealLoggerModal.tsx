@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/axios";
+import PeakAlert from "../PeakAlert";
 
 type MealLabel = "breakfast" | "lunch" | "dinner" | "snack";
 
@@ -48,7 +49,7 @@ type MealLoggerModalProps = {
   onMealSaved: () => void;
 };
 
-const DAILY_CALORIE_TARGET = 2300; // WILL CHANGE WITH QUESTIONNAIRRE
+const DAILY_CALORIE_TARGET = 2300;
 
 const labelDisplay: Record<MealLabel, string> = {
   breakfast: "Breakfast",
@@ -62,6 +63,7 @@ const MealLoggerModal = ({ isOpen, onClose, onMealSaved }: MealLoggerModalProps)
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -166,7 +168,6 @@ const MealLoggerModal = ({ isOpen, onClose, onMealSaved }: MealLoggerModalProps)
   };
 
   const handleEditItemQty = (index: number) => {
-    // Read current qty from the current items array
     const target = items[index];
     if (!target) return;
   
@@ -179,7 +180,7 @@ const MealLoggerModal = ({ isOpen, onClose, onMealSaved }: MealLoggerModalProps)
   
     const newQty = Number(input);
     if (!Number.isFinite(newQty) || newQty <= 0) {
-      window.alert("Quantity must be a positive number.");
+      setAlertMessage("Quantity must be a positive number.");
       return;
     }
 
@@ -191,7 +192,6 @@ const MealLoggerModal = ({ isOpen, onClose, onMealSaved }: MealLoggerModalProps)
   };
 
   const handleAddFoodForLabel = (label: MealLabel) => {
-    // Close modal and go to Nutrition page with preset label
     onClose();
     navigate(`/nutrition?label=${label}`);
   };
@@ -202,7 +202,7 @@ const MealLoggerModal = ({ isOpen, onClose, onMealSaved }: MealLoggerModalProps)
 
     try {
       const payload = {
-        eaten_at: null, // let backend use "today"
+        eaten_at: null,
         items: items.map((item) => ({
           food_id: item.food_id,
           qty: item.qty,
@@ -416,6 +416,13 @@ const MealLoggerModal = ({ isOpen, onClose, onMealSaved }: MealLoggerModalProps)
           </button>
         </div>
       </div>
+
+      {alertMessage && (
+        <PeakAlert
+          message={alertMessage}
+          onClose={() => setAlertMessage(null)}
+        />
+      )}
     </div>
   );
 };

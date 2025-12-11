@@ -18,7 +18,7 @@ type ExerciseCardProps = {
   exercise: Exercise;
   isAuthenticated: boolean;
   onCardClick: () => void;
-  onAddClick?: () => void; // ✅ make this optional
+  onAddClick?: () => void;
 };
 
 const ExerciseCard = ({

@@ -2,7 +2,7 @@ type NextButtonProps = {
     isLastStep?: boolean;
     onClick: () => void;
   };
-  //this is currently useless
+
 export default function NextButton({ isLastStep, onClick }: NextButtonProps) {
     return (
         <div className="mt-6 flex justify-center pb-4">

@@ -1,4 +1,3 @@
-# backend/app/routers/admin.py
 """
 Admin endpoints for manual operations like resetting the leaderboard.
 """

@@ -3,13 +3,14 @@ import ProgressBar from "../components/questionnaire/ProgressBar";
 import QuestionnaireSection from "../components/questionnaire/QuestionnaireSection";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
+import PeakAlert from "../components/PeakAlert";
 
 export default function Questionnaire() {
-  //this area will store the answers to the questions
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [questions, setQuestions] = useState<Array<{ id: number; text: string }>>([]);
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(0);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const PAGE_SIZE = 5;
 
   useEffect(() => {
@@ -25,8 +26,6 @@ export default function Questionnaire() {
     };
   }, []);
 
-  // No auto-submit: users will answer manually
-
   const handleAnswerChange = (id: number, value: string) => {
     setAnswers((prev) => ({
       ...prev,
@@ -34,7 +33,6 @@ export default function Questionnaire() {
     }));
   };
 
-  //keep track of how many questions have been answered
   const answeredCount = questions.filter(
     (q) => (answers[q.id] ?? "").length > 0
   ).length;
@@ -45,7 +43,7 @@ export default function Questionnaire() {
       navigate('/profile');
     } catch (err) {
       console.error('Failed to submit answers', err);
-      alert('Failed to submit questionnaire.');
+      setAlertMessage('Failed to submit questionnaire.');
     }
   };
 
@@ -100,6 +98,12 @@ export default function Questionnaire() {
           {currentPage >= Math.max(1, Math.ceil(questions.length / PAGE_SIZE)) - 1 ? 'Complete' : 'Next'}
         </button>
       </div>
+      {alertMessage && (
+        <PeakAlert
+          message={alertMessage}
+          onClose={() => setAlertMessage(null)}
+        />
+      )}
     </div>
   );
 }

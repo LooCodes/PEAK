@@ -1,9 +1,9 @@
-// src/pages/Exercise.tsx
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
 import ExerciseCard from "../components/exercise/ExerciseCard";
 import ExerciseInfoModal from "../components/exercise/ExerciseInfoModal";
+import PeakAlert from "../components/PeakAlert";
 
 export type Exercise = {
   id: number;
@@ -15,7 +15,7 @@ export type Exercise = {
   thumbnail_url: string | null;
   gif_url: string | null;
   instructions: string[] | null;
-  external_id: string | null; // ExerciseDB exerciseId
+  external_id: string | null;
 };
 
 type ExerciseListResponse = {
@@ -32,18 +32,16 @@ const ExercisePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-
-  // "browse" = API search; "saved" = user's saved workouts
   const [viewMode, setViewMode] = useState<"browse" | "saved">("browse");
 
-  // Initial load based on viewMode
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+
   useEffect(() => {
     if (viewMode === "browse") {
       fetchExercises();
     } else {
       fetchSavedExercises();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode]);
 
   const fetchExercises = async (term?: string) => {
@@ -89,7 +87,6 @@ const ExercisePage = () => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Searching only makes sense in "browse" mode.
     if (viewMode !== "browse") {
       setViewMode("browse");
     }
@@ -99,39 +96,41 @@ const ExercisePage = () => {
 
   const handleAddExercise = async (exercise: Exercise) => {
     if (!isAuthenticated) {
-      alert("Please log in to add exercises to your workout.");
+      setAlertMessage("Please log in to add exercises to your workout.");
       return;
     }
 
-    // Prefer the external ExerciseDB ID if available (e.g. "exr_41n2h...")
     const exerciseIdForBackend = exercise.external_id ?? exercise.id.toString();
 
     try {
       await api.post("/exercises/user/workout-exercises", {
         exercise_id: exerciseIdForBackend,
       });
-      alert("Exercise added to your saved workouts!");
 
-      // If we're currently viewing saved workouts, refresh the list
+      setAlertMessage("Exercise added to your saved workouts!");
+
       if (viewMode === "saved") {
         fetchSavedExercises();
       }
     } catch (err: any) {
       console.error("Error adding exercise:", err);
+
+      let msg = "Failed to add exercise. Please try again.";
+
       if (err.response?.status === 400) {
-        alert(err.response?.data?.detail || "Exercise already in your saved list.");
+        msg = err.response?.data?.detail || "Exercise already in your saved list.";
       } else if (err.response?.status === 404) {
-        alert(err.response?.data?.detail || "Exercise not found.");
-      } else {
-        alert("Failed to add exercise. Please try again.");
+        msg = err.response?.data?.detail || "Exercise not found.";
       }
+
+      setAlertMessage(msg);
     }
   };
 
   const handleCardClick = async (exercise: Exercise) => {
     // Open modal immediately with summary data
     setSelectedExercise(exercise);
-    if (!exercise.external_id) return; // mock / local-only case
+    if (!exercise.external_id) return;
 
     try {
       setDetailLoading(true);
@@ -148,7 +147,7 @@ const ExercisePage = () => {
     <div className="min-h-screen bg-[#212121] pt-24 pb-10 px-4">
       {/* Hero area */}
       <div className="max-w-5xl mx-auto mb-6">
-        <h2 className="text-4xl font-extrabold text-center mb-2">WORKOUT!</h2>
+        <h2 className="text-4xl font-extrabold text-center mb-2">Workouts.</h2>
 
         {/* Search bar */}
         <form
@@ -240,6 +239,13 @@ const ExercisePage = () => {
           exercise={selectedExercise}
           onClose={() => setSelectedExercise(null)}
           isLoadingDetails={detailLoading}
+        />
+      )}
+
+      {alertMessage && (
+        <PeakAlert
+          message={alertMessage}
+          onClose={() => setAlertMessage(null)}
         />
       )}
     </div>

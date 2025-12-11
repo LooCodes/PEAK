@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import PeakAlert from '../components/PeakAlert';
 
 type WorkoutBest = {
   exercise_id: number;
@@ -37,6 +38,7 @@ const Profile: React.FC = () => {
   const [bestsLoading, setBestsLoading] = React.useState(false);
   const [latestAnswers, setLatestAnswers] = React.useState<Array<{ question_id: number; question_text: string; answer_value: string; updated_at: string }>>([]);
   const [answersLoading, setAnswersLoading] = React.useState(false);
+  const [alertMessage, setAlertMessage] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const fetchBests = async () => {
@@ -145,7 +147,7 @@ const Profile: React.FC = () => {
                         setLatestAnswers(res.data || []);
                       } catch (err) {
                         console.error('Failed to load latest answers', err);
-                        alert('Could not load latest questionnaire answers.');
+                        setAlertMessage('Could not load latest questionnaire answers.');
                       } finally {
                         setAnswersLoading(false);
                       }
@@ -210,6 +212,12 @@ const Profile: React.FC = () => {
           </div>
         </div>
       </div>
+      {alertMessage && (
+        <PeakAlert
+          message={alertMessage}
+          onClose={() => setAlertMessage(null)}
+        />
+      )}
     </div>
   );
 };
