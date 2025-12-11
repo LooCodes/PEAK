@@ -184,7 +184,8 @@ const ExercisePage = () => {
           >
             Browse Exercises
           </button>
-          <button
+
+          {isAuthenticated &&<button
             type="button"
             onClick={() => setViewMode("saved")}
             className={`px-4 py-2 rounded-full text-sm border transition ${
@@ -194,7 +195,7 @@ const ExercisePage = () => {
             }`}
           >
             Saved Workouts
-          </button>
+          </button>}
         </div>
       </div>
 
